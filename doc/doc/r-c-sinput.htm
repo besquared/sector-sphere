@@ -1,0 +1,55 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<title>Sector/Sphere Manual</title>
+<link rel="stylesheet" href="sectordoc.css" type="text/css" />
+</head>
+
+<body>
+<div class="ref_head">Reference: Classes </div>
+
+<h4 class="func_name"><strong>SInput</strong></h4>
+<p>The <b>SInput</b> class is a the parameter for the input of User Defined Functions (UDFs). </p>
+
+<h5>Class Members</h5>
+
+
+ 
+<table width="100%" border="1" cellpadding="1" cellspacing="0" bordercolor="#CCCCCC">
+  <tr>
+    <td width="9%" class="table_headline"><strong>Member</strong></td>
+    <td width="16%" class="table_headline"><strong>Type</strong></td>
+    <td width="75%" class="table_headline"><strong>Description</strong></td>
+  </tr>
+  <tr>
+    <td><a href="r-t-download.html"></a> m_pcUnit</td>
+    <td>char*</td>	
+    <td>The data segment to be processed </td>
+  </tr>
+  <tr>
+    <td>m_iRows</td>
+    <td>int</td>
+    <td>number of rows/records in this segment </td>
+  </tr>
+  <tr>
+    <td>m_pllIndex</td>
+    <td>int64_t*</td>
+    <td>An array of 64-integer that notes the offset of each records in the input segment </td>
+  </tr>
+  <tr>
+    <td>m_pcParam</td>
+    <td>char*</td>
+    <td>the parameter passed here by the Sphere application in run() or run_mr() </td>
+  </tr>
+  <tr>
+    <td>m_pSize</td>
+    <td>int</td>
+    <td>size of the parameter buffer </td>
+  </tr>
+</table>
+<h5><strong>Class Interfaces</strong></h5>
+<p>There is no public interface for this class. </p>
+<p>&nbsp;</p>
+</body>
+</html>

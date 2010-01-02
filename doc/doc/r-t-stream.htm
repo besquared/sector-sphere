@@ -1,0 +1,51 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<title>Sector/Sphere Manual</title>
+<link rel="stylesheet" href="sectordoc.css" type="text/css" />
+</head>
+
+<body>
+<div class="ref_head">Reference: Tools </div>
+
+<h4 class="func_name"><strong>stream</strong></h4>
+<p>The<strong> stream  </strong>tool allows to run system commands or user programs directly on Sector files without writing a Sphere program. </p>
+
+<div class="code">stream<strong><font color="#FFFFFF"> -i input [-o output] -c command [-b buckets] [-p parameters] [-f files] </font></strong></div>
+
+<h5>Parameters</h5>
+<dl>
+  <dt><em>-i input </em></dt>
+  <dd>the input file or directory.</dd>
+  <dt><em>-o output</em></dt>
+  <dd>the output directory to store the results. This is optional. If not set, result will be print on screen. </dd>
+  <dt><em>-c command </em></dt>
+  <dd>the name of the system command or user program.</dd>
+  <dt><em>-b buckets </em></dt>
+  <dd>the number of buckets (for Reduce style computation) . This is optional. If set, Sector assumes each line in the output (text) is a record and the first number is the bucket ID.The size of each line is limited to 64KB. The number of buckets must be greater than 0. When set, the <em>output</em> option must also be set. </dd>
+  <dt><em>-p parameter </em></dt>
+  <dd>command parameters. This is optional. If &quot;&quot; is required in the parameter, they must be preceded with a '\' character.</dd>
+  <dt><em>-f files </em></dt>
+  <dd>files to be uploaded. If the &quot;command&quot; is a user program, its path should be listed here so that the program will be uploaded to Sector. </dd>
+</dl>
+<h5>Description</h5>
+<p>The <strong>stream</strong> tool provides a functionality similar to Hadoop Streaming. The <strong>stream</strong> tool supports to run a specific command or application (<em>-c</em>) on a given input data set (<em>-i</em>). The results can be either written into a Sector directory (<em>-o</em>), or print on the client side screen. </p>
+<p>For example, if you want to know the MD5 checksum on all files in the &quot;data&quot; directory, you can do:</p>
+<div class="code">stream -i data -c md5sum </div>
+<p>As another example, if you need to search text &quot;my data&quot; from all files in the &quot;html&quot; directory, you can do:</p>
+<div class="code">stream -i html -c grep -p &quot;my data&quot; </div>
+<p>Furthermore, <strong>stream</strong> supports bucket style Sphere operations (similar to the Reduce operation in MapReduce). In this case, Sphere assumes that the output from the user specified command is text data, with each record per line. The first item (from position 0 until the first blank or tab in the line) is treated as bucket ID. The whole line (including the bucket ID) will be put into a proper bucket file. The result bucket files will be located in the output directory. </p>
+<p>For example, the WordCount example can be implemented as following. First, a user defined program, written in any language, can read an input HTML file and print the following lines to the screen:</p>
+<p>
+1 at as<br>
+2 bee begin<br>
+...
+</p>
+<p>These lines will be put into different bucket files in the same directory. The first file contains all lines starting with 1, the second line contains all lines starting with 2, and so on. Then in the second step, another program can parse each bucket file independently.</p>
+<p>Please note that the length of each line cannot exceed 64K. More text will be ignored. Currently Sphere Stream only work with files. We will support records and blocks in future versions. </p>
+<p>Available since Sector version 1.24.  </p>
+<p><strong>See Also</strong></p>
+<p><strong><a href="t-r-ls.htm"></a></strong></p>
+</body>
+</html>

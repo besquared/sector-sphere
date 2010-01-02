@@ -1,0 +1,26 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Sector/Sphere Manual</title>
+<link rel="stylesheet" href="sectordoc.css" type="text/css" />
+</head>
+
+<body>
+<div class="ref_head">&nbsp;Installation</div>
+
+<h3><font color="#000080">Starting more Master Servers </font></h3>
+<p>For better availability and to serve more clients, more master servers can be started. A new master server can be started at any time. However, it is recommended that the new server is started   when no client connects to the system, otherwise client requests may experience short delay due to the reorganization of the Sector masters. </p>
+
+<p><b>master.conf</b></p>
+<p>The configuration file of the new master must be consistent to those existing masters. In particular, the number of replicas should be the same as other masters. It is recommended to have exactly one security server in the system. However, a master server may specify a different security server if necessary. In this case, the configuration files of the security servers must be the same. </p>
+<p><strong>topology.conf </strong></p>
+<p>Copy the &quot;topology.conf&quot; file from an existing master server to the ./conf directory of the new master server, if there is one. </p>
+<p><strong>slaves.list</strong></p>
+<p>Copy the &quot;slaves.list&quot; file from an existing master server to the ./conf directory of the new master server, if there is one. </p>
+<p><strong>master_node.key/cert</strong></p>
+<p>Copy the master key/certificate files of an existing master server to the ./conf directory of the new master server. Do NOT generate a new set of key/certificate pair for the new master. </p>
+<p><strong></strong></p>
+<p>Now, to start the new master, simply run <strong>./start_master IP port</strong>, where <em>IP</em> and <em>port</em> is the address of an existing master server. </p>
+</body>
+</html>

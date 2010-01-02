@@ -1,0 +1,56 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<title>Sector/Sphere Manual</title>
+<link rel="stylesheet" href="sectordoc.css" type="text/css" />
+<style type="text/css">
+<!--
+.style3 {
+	color: #FFFFFF;
+	font-weight: bold;
+}
+-->
+</style>
+</head>
+
+<body>
+<div class="ref_head">Reference: Classes: Client </div>
+
+<h4 class="func_name"><strong>move</strong></h4>
+<p>The<strong> move  </strong>function moves a file/directory from one directory to another, and/or rename the current one to the specified destination name. </p>
+
+<div class="code">
+  int move<br />
+  (<br />
+  &nbsp;&nbsp;&nbsp;const string& <span class="style3">oldpath</span>,<br />
+  &nbsp;&nbsp;&nbsp;const string& <span class="style3">newpath</span><br />
+  );
+</div>
+
+<h5>Parameters</h5>
+
+<dl>
+  <dt><i>oldpath</i></dt>
+  <dd>[in] the name of a file or directory to be moved and/or renamed .</dd>
+  <dt><em>newpath</em></dt>
+  <dd>[in] the name of destination file or path.</dd>
+</dl>
+<h5>Return Value</h5>
+<p>On success, this function return 1. If error occurs, a negative value is returned. </p>
+<table width="100%" border="1" cellpadding="2" cellspacing="0" bordercolor="#CCCCCC">
+  <tr>
+    <td width="17%" class="table_headline"><strong>Error Name</strong></td>
+    <td width="17%" class="table_headline"><strong>Error Code</strong></td>
+    <td width="83%" class="table_headline"><strong>Comment</strong></td>
+  </tr>
+  <tr>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+  </tr>
+</table>
+<h5>Description</h5>
+<p>Suppose <em>oldpath</em> is &quot;src_dir/src_name&quot; and <em>newpath</em> is &quot;dst_dir/dst_name&quot;. <em>odlpath</em> and &quot;dst_dir&quot; must exist, otherwise E_NOEXIST error will return. If &quot;dst_name&quot; exist and it is file rather than a directory, E_EXIST error will return. If &quot;dst_name&quot; is an existing directory, the file/directory &quot;src_name&quot; will be moved to &quot;dst_dir/dst_name/src_name&quot;. If &quot;dst_name&quot; does not exist, the file/directory &quot;src_name&quot; will be moved to &quot;dst_dir&quot; and renamed to &quot;dst_dir/dst_name&quot;. </p>
+</body>
+</html>

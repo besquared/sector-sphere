@@ -1,0 +1,47 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<title>Sector/Sphere Manual</title>
+<link rel="stylesheet" href="sectordoc.css" type="text/css" />
+</head>
+
+<body>
+<div class="ref_head">Reference: Tools </div>
+
+<h4 class="func_name"><strong>sysinfo</strong></h4>
+<p>The<strong> sysinfo </strong>tool retrieves the detailed informtaion of the sector system. </p>
+
+<div class="code">sysinfo</div>
+
+<h5>Parameters</h5>
+<dl>
+  <dt><i>None.</i></dt>
+</dl>
+
+<h5>Description</h5>
+<p>Below is an example of the output of the <strong>sysinfo</strong> tool. The first part shows the system level information, including system start time, available disk, total file size, total number of files, and total number of slave nodes. The second part shows the cluster level information. Only the top level of clusters is shown. The information includes total number of nodes, available disk space, total file size, total size of data moved into the cluster, and total number of data moved out of the rack. The third part shows the node level information. It shows, for each node, the IP address, start time, available disk, total size of files, memory used by Sector, CPU time used by Sector (since the start time), total size of inbound data from network, and total size of outbound data. </p>
+<div class="code">Sector System Information:<br />
+  Running since Thu Feb 19 12:56:35 2009<br />
+  Available Disk Size 13441353 MB<br />
+  Total File Size 332641 MB<br />
+  Total Number of Files 68<br />
+  Total Number of Slave Nodes 26<br />
+  ------------------------------------------------------------<br />
+  Total number of clusters 5<br />
+  Cluster_ID  Total_Nodes  AvailDisk(MB)  FileSize(MB)  NetIn(MB)  NetOut(MB)<br />
+  0:  0  0  0  0  0<br />
+  1:  26  13441353  518417  0  0<br />
+  2:  0  0  0  0  0<br />
+  3:  0  0  0  0  0<br />
+  4:  0  0  0  0  0<br />
+  ------------------------------------------------------------<br />
+  SLAVE_ID  IP  TS(us)  AvailDisk(MB)  TotalFile(MB)  Mem(MB)  CPU(us)  NetIn(MB)  NetOut(MB)<br />
+  1:  206.220.241.92  1235076666499532  546376  10299  925  2277550000  37670  34172<br />
+  2:  206.220.241.95  1235076666502299  515006  30899  936  2408500000  69316  44080<br />
+  3:  206.220.241.102  1235076666505083  526021  30136  679  2383390000  59518  32725<br />
+  4:  206.220.241.94  1235076666521560  530152  21362  403  2396050000  47661  43627<br />
+5:  206.220.241.96  1235076666540974  561533  20599  651  2197840000  46442  31674</div>
+<p>&nbsp;</p>
+</body>
+</html>

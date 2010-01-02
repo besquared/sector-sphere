@@ -1,0 +1,43 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Sector/Sphere Manual</title>
+<link rel="stylesheet" href="sectordoc.css" type="text/css" />
+<style type="text/css">
+<!--
+.style1 {color: #FF0000}
+-->
+</style>
+</head>
+
+<body>
+<div class="ref_head">&nbsp;Installation</div>
+
+<h3><font color="#000080">Configuring the Client </font></h3>
+<p>The configuration file &quot;client.conf&quot; is not required to run the client. However, without client.conf, you will be prompted to provide master server information and user account information every time you run a Sector command. This information can be stored in the client configuration file. The file client &quot;client.conf&quot; is located at ./codeblue2/conf. </p>
+<p><b>client.conf</b></p>
+<p>A copy of the client configuration file can be found below. The MASTER_ADDRESS is the address of the master server in the format of &lt;ip:port&gt; or &lt;domain_name:port&gt;. The &quot;USERNAME&quot; and &quot;PASSWORD&quot; options specify the user's account name and password.  Finally, the CERTIFICATE option stores the location of the master's certificate, which is used to verify the identity of the master node.</p>
+<p>In the confiuguration file, <span class="style1">the option value must be preceded by a &quot;TAB&quot; charactor</span>. The &quot;#&quot; charactor can be used for comment lines. </p>
+<p>Note that in order to allow Sector-FUSE work properly, the &quot;CERTIFICATE&quot; path must be an abosolute path. </p>
+<div class="code">
+    #Master address<br />
+    MASTER_ADDRESS<br />
+    &nbsp;&nbsp;&nbsp;&nbsp;ncdm161.lac.uic.edu:6000<br />
+	<br />
+    #user's name<br />
+    USERNAME<br />
+    &nbsp;&nbsp;&nbsp;&nbsp;text<br />
+	<br />
+    #password<br />
+    PASSWORD<br />
+    &nbsp;&nbsp;&nbsp;&nbsp;xxx<br />
+	<br />
+    #master's certificate file<br />
+    CERTIFICATE<br />
+    &nbsp;&nbsp;&nbsp;&nbsp;/home/gu/master_node.cert<br />
+</div>
+
+<p>&nbsp;</p>
+</body>
+</html>

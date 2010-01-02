@@ -1,0 +1,17 @@
+#the root account has ultimate permission to all files. However, it is not necessarily to have a root account to run Sector
+#in addition, you may change the ACL so that root can only login from a specific IP
+
+PASSWORD
+	abc123
+
+READ_PERMISSION
+	/
+
+WRITE_PERMISSION
+	/
+
+EXEC_PERMISSION
+	FALSE
+
+ACL
+	0.0.0.0/0

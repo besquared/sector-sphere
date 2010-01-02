@@ -1,0 +1,14 @@
+#the anonymous user account is similar to the anonymous access for an FTP server
+#there is no password and anyone login with this account can only read a specific directroy
+
+PASSWORD
+
+READ_PERMISSION
+	/pub
+
+WRITE_PERMISSION
+
+EXEC_PERMISSION
+
+ACL
+	0.0.0.0/0

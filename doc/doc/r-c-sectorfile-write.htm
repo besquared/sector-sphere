@@ -1,0 +1,58 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<title>Sector/Sphere Manual</title>
+<link rel="stylesheet" href="sectordoc.css" type="text/css" />
+<style type="text/css">
+<!--
+.style3 {
+	color: #FFFFFF;
+	font-weight: bold;
+}
+-->
+</style>
+</head>
+
+<body>
+<div class="ref_head">Reference: Classes: SectorFile </div>
+
+<h4 class="func_name"><strong>write</strong></h4>
+<p>The<strong> write </strong> function writes a block of data to the opened file. </p>
+
+<div class="code">
+int64_t write <br />
+(<br />
+&nbsp;&nbsp;&nbsp;const char* <span class="style3">buf</span>, <br />
+&nbsp;&nbsp;&nbsp;const int64_t&amp; <span class="style3">size</span><br />
+);<br />
+</div>
+
+<h5>Parameters</h5>
+
+<dl>
+  <dt><i>buf</i></dt>
+  <dd>[in] the pointer to the buffer of data to write to the Sector file.</dd>
+  <dt><em>size</em></dt>
+  <dd>[in] size of the data to write.</dd>
+</dl>
+<h5>Return Value</h5>
+<p>On success, the function returns the actual number of bytes that has been written. If error occurs, a negative value is returned. </p>
+<table width="100%" border="1" cellpadding="2" cellspacing="0" bordercolor="#CCCCCC">
+  <tr>
+    <td width="17%" class="table_headline"><strong>Error Name</strong></td>
+    <td width="17%" class="table_headline"><strong>Error Code</strong></td>
+    <td width="83%" class="table_headline"><strong>Comment</strong></td>
+  </tr>
+  <tr>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+  </tr>
+</table>
+<h5>Description</h5>
+<p>This function writes a block of data from the current write offset position, which is 0 initially and can be reset by <a href="r-c-sectorfile-seekp.htm"><strong>seekp</strong></a>. The write offset can be retrieved by <a href="r-c-sectorfile-tellp.htm"><strong>tellp</strong></a>. </p>
+<h5><strong>See Also</strong></h5>
+<p><strong><a href="r-c-sectorfile-read.htm">read</a></strong>, <a href="r-c-sectorfile-seekp.htm"><strong>seekp</strong></a>, <a href="r-c-sectorfile-tellp.htm"><strong>tellp</strong></a></p>
+</body>
+</html>

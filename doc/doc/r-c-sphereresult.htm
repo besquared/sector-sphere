@@ -1,0 +1,75 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<title>Sector/Sphere Manual</title>
+<link rel="stylesheet" href="sectordoc.css" type="text/css" />
+</head>
+
+<body>
+<div class="ref_head">Reference: Classes </div>
+
+<h4 class="func_name"><strong>SphereResult</strong></h4>
+<p>The <b>SphereResult</b> class stores the result sent back from each SPE. </p>
+
+<h5>Class Members</h5>
+
+
+ 
+<table width="100%" border="1" cellpadding="1" cellspacing="0" bordercolor="#CCCCCC">
+  <tr>
+    <td width="12%" class="table_headline"><strong>Member</strong></td>
+    <td width="13%" class="table_headline"><strong>Type</strong></td>
+    <td width="75%" class="table_headline"><strong>Description</strong></td>
+  </tr>
+  <tr>
+    <td>m_iResID</td>
+    <td>int</td>	
+    <td>result ID </td>
+  </tr>
+  <tr>
+    <td>m_iStatus</td>
+    <td>int</td>	
+    <td>Result status: if this DS is processed successfully (&gt; 0, number of rows); If not (&lt;0), m_pcData may contain error message.</td>
+  </tr>
+  <tr>
+    <td>m_pcData</td>
+    <td>char*</td>
+    <td>result buffer  </td>
+  </tr>
+  <tr>
+    <td>m_iDataLen</td>
+    <td>int</td>
+    <td>size of the data buffer </td>
+  </tr>
+  <tr>
+    <td>m_pllIndex</td>
+    <td>int64_t*</td>
+    <td>the record index of the result </td>
+  </tr>
+  <tr>
+    <td>m_iIndexLen</td>
+    <td>int</td>
+    <td>size of the index (number of 64bit integers) </td>
+  </tr>
+  <tr>
+    <td>m_strOrigFile</td>
+    <td>string</td>
+    <td>the corresponding input file </td>
+  </tr>
+  <tr>
+    <td>m_llOrigStarRec</td>
+    <td>int64_t</td>
+    <td>the starting record in the input stream </td>
+  </tr>
+  <tr>
+    <td>m_llOridEndRec</td>
+    <td>int64_t</td>
+    <td>the ending record in the input stream </td>
+  </tr>
+</table>
+<h5><strong>Class Interfaces</strong></h5>
+<p>There is no public interface for this class. </p>
+<p>&nbsp;</p>
+</body>
+</html>

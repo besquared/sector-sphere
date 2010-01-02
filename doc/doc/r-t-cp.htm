@@ -1,0 +1,32 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<title>Sector/Sphere Manual</title>
+<link rel="stylesheet" href="sectordoc.css" type="text/css" />
+</head>
+
+<body>
+<div class="ref_head">Reference: Tools </div>
+
+<h4 class="func_name"><strong>cp</strong></h4>
+<p>The<strong> cp </strong>tool makes a copy of an existing file/director within the Sector DFS. </p>
+
+<div class="code">cp <strong><font color="#FFFFFF">SRC_PATH DST_PATH </font></strong></div>
+
+<h5>Parameters</h5>
+<dl>
+  <dt><em>SRC_PATH</em></dt>
+  <dd>The file/directory to be copied.</dd>
+  <dt><em>DST_PATH</em></dt>
+  <dd>The target path .</dd>
+</dl>
+
+<h5>Description</h5>
+<p>Suppose SRC_PATH is &quot;src_dir/src_name&quot; and DST_PATH is &quot;dst_dir/dst_name&quot;. SRC_PATH and dst_dir must exist, otherwise &quot;file not exist&quot; error will return. If &quot;dst_name&quot; exist and it is a file rather than a directory, &quot;file already exist&quot; error will return. If &quot;dst_name&quot; is an existing directory, the file/directory &quot;src_name&quot; will be copied to &quot;dst_dir/dst_name/src_name&quot;. If &quot;dst_name&quot; does not exist, the file/directory &quot;src_name&quot; will be copied to &quot;dst_dir&quot; and renamed to &quot;dst_dir/dst_name&quot;.</p>
+<p>Wildcard characters * and ? are supported to specify the source files or directories.</p>
+<p>The <strong>cp</strong> tool only works for files within the Sector DFS. To copy a file in to or out of the Sector DFS, use the <a href="r-t-upload.htm">upload</a> or <a href="r-t-download.htm">download</a> tool. </p>
+<p><strong>See Also</strong></p>
+<p><strong><a href="t-r-mv.htm">mv</a></strong></p>
+</body>
+</html>

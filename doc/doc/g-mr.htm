@@ -1,0 +1,35 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Sector/Sphere Manual</title>
+<link rel="stylesheet" href="sectordoc.css" type="text/css" />
+</head>
+</html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+</head>
+
+<body>
+<div class="ref_head">&nbsp;User's Guide </div>
+
+<h3><font color="#000080">Sphere and MapReduce </font></h3>
+<p>Any MapReduce programs can be re-written using Sphere. If the program only   has Map phase, it can be expressed by a simple Sphere process (i.e., process   each input element independently by a slave). If both Map and Reduce are   present, you can use the &quot;bucket&quot; output in Sphere to simulate the reduce   phase. The Reduce phase merges all records with the same key, while Sphere can   send all output records with the same bucket ID to the same file.</p>
+<p>Explicit MapReduce is also supported in Sector. A MapReduce program named   &quot;MROPERATION&quot; can define some or all of the following routines, which should be   compiled in a single library file, similar to the Sphere routine. These four   routines are equivelant to the MapReduce routine &quot;map&quot;, &quot;partition&quot;,   &quot;comparison&quot;, and &quot;reduce&quot; used in Hadoop. Note that there is no record parser   (aka input reader), which is done using the record index, as described in the   Sphere programs.</p>
+<p>If the map function is not defined, each input record will be partitioned   directly by the partition function. The partition function is similar to the   bucket operation in Sphere. Note that this MapReduce implementation by Sector   does not use explicit key/value pair. Sector passes the whole record as a   &quot;char*&quot; type to all the processing functions. </p>
+<ul>
+  <li>int MROPERATION_map(const SInput* input, SOutput* output,   SFile* file); </li>
+  <li>int MROPERATION_partition(const char* record, int size, void*   param, int psize); </li>
+  <li>int MROPERATION_compare(const char* r1, int s1, const char* r2,   int s2);<br />
+    -1 if r1 &lt; r2; 0 if r1 == r2; 1 if r1 &gt;   r2; </li>
+  <li>int MROPERATION_reduce(const SInput* input, SOutput* output,   SFile* file); </li>
+</ul>
+<p>The following API can be used to execute a MapReduce routine. The parameter   &quot;mr&quot; is the name of the &quot;MROPERATION&quot;. For example, if MROPERATION is   &quot;terasort&quot;, then the value of &quot;mr&quot; should be &quot;terasort&quot;. </p>
+<ul>
+  <li>int run_mr(const SphereStream&amp; input, SphereStream&amp;   output, const string&amp; mr, const int&amp; rows, const char* param = NULL,   const int&amp; size = 0); </li>
+</ul>
+<p>You may find the terasort and inverted index example using MapReduce in   mrsort.cpp and mrword.cpp, with the functions defined in ./examples/funcs/mr_sort.cpp   and ./exampes/funcs/mr_word.cpp. </p>
+</body>
+</html>
+

@@ -1,0 +1,13 @@
+C++ = g++
+
+DEBUG = 1
+STATIC = 0
+
+CCFLAGS = -I.
+LDFLAGS = -lstdc++ -lpthread -lssl -L.
+
+ifeq ($(DEBUG), 1)
+   CCFLAGS += -Wall -g
+else
+   CCFLAGS += -O3
+endif

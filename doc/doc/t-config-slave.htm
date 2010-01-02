@@ -1,0 +1,40 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Sector/Sphere Manual</title>
+<link rel="stylesheet" href="sectordoc.css" type="text/css" />
+<style type="text/css">
+<!--
+.style1 {color: #FF0000}
+-->
+</style>
+</head>
+
+<body>
+<div class="ref_head">&nbsp;Installation</div>
+
+<h3><font color="#000080">Configuring the Slave </font></h3>
+<p>There is only one configuration file &quot;slave.conf&quot; under ./codeblue2/conf. This file must be configured before the slaves can be started. </p>
+
+<p><b>slave.conf</b></p>
+<p>A copy of the slave configuration file can be found below. The MASTER_ADDRESS is the address of the master server in the format of &lt;ip:port&gt; or &lt;domain_name:port&gt;. The &quot;DATA_DIRECTORY&quot; option is the directory that Sector uses to store data files and system information.  If the directory does not exist, Sector will create it automatically, provided that the slave program has write permission to the directory. There are more options in the configuration file and the explanation for each option is also included immediately above the option name.</p>
+<p>In the confiuguration file, <span class="style1">the option value must be preceded by a &quot;TAB&quot; charactor</span>. The &quot;#&quot; charactor can be used for comment lines. </p>
+<div class="code">
+    #Master address<br />
+    MASTER_ADDRESS<br />
+    &nbsp;&nbsp;&nbsp;&nbsp;ncdm161.lac.uic.edu:6000<br />
+	<br />
+    #Data directory<br />
+    DATA_DIRECTORY<br />
+    &nbsp;&nbsp;&nbsp;&nbsp;/home/u2/yunhong/work/data/<br />
+	<br />
+    #Maximum data size, in MB<br />
+    #Optional: use this if you do not want Sector to use all available disk space<br />
+    #MAX_DATA_SIZE<br />
+    #&nbsp;&nbsp;&nbsp;&nbsp;1000000
+</div>
+
+<p>If the data directory already contains local files before the node joins the system, these files will become part of the Sector file system, except those with name conflicts, which will be moved into DATA_DIRECTORY/.attic. </p>
+</body>
+</html>

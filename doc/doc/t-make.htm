@@ -1,0 +1,35 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Sector/Sphere Manual</title>
+<link rel="stylesheet" href="sectordoc.css" type="text/css" />
+</head>
+
+<body>
+<div class="ref_head">&nbsp;Installation </div>
+<h3><font color="#000080">Compiling Source Code and Starting Sector </font></h3>
+<h4>Prerequisite</h4>
+
+<p>The Sector/Sphere library is distributed with source code, example applications, and documentation. Currently the complete Sector software suite, including both server and client, only works on Linux. We will port the client to Windows in the near future. </p>
+  <p><strong>The software is written in C++. GCC/G++ version 3.4 or above is required. Openssl development library is required (e.g., libssl-dev for Debian or openssl-devel for Fedora). </strong></p>
+  <p align="center"><img src="images/sector-arch.jpg" alt="sector arch" width="360" height="214" /></p>
+  <p>There are four parts in the software suite: the security server, the master server, the slaves, and the clients. These four parts can be installed on the same node or over multiple nodes. However, usually each node should only host no more than one slave instance. <strong>Each slave instance requires at least 10GB free disk space. </strong>Debian Linux and XFS file system are recommended, although this is not a must. </p>
+
+  <h4>Compile and Install </h4>
+  <p>You may either download the tarball release or   check out the most recent code from SourceForge SVN. The source code will be   located under a directory called &quot;codeblue2&quot;. When you are ready, follow the several steps below to install Sector.</p>
+  <ol>
+    <li>in ./codeblue2, do <strong>make</strong> </li>
+    <li>update configuration files in ./conf, including master.conf, slave.conf, client.conf, user accounts, and slave access control list, etc. </li>
+    <li>if necessary, copy the complete codeblue2 directory to all slaves and client locations (do NOT copy the keys in ./conf). </li>
+    <li>start the security server, the master, and the slaves. </li>
+  </ol>
+  <p>If you have any questions, please post them on SourceForge <a href="https://sourceforge.net/forum/?group_id=172838" target="_blank">https://sourceforge.net/forum/?group_id=172838</a>.</p>
+
+<h4>Start the Servers </h4>
+  <p>The security server is located under directory ./codeblue2/security. You can start the security server in this directory by running<strong> ./sserver</strong>. By default the security server will listen on port 5000, you may use <strong>./sserver &lt;port&gt; </strong>to specify a different port. There is no verbose screen output from this command, except that it tells that the server is running at the specific port. </p>
+  <p>The Sector master server is in the directory of ./codeblue2/master. you may start the master server by using command<strong> ./start_master</strong>. Again, the command must be used in the directory of   ./codeblue2/master, because it needs to locate the configuration file in ../conf. There is no verbose screen output from the master server. A log is kept in ./master/sector.log. </p>
+  <p>Alternatively, you may use the <strong>./start_all</strong> and <strong>./stop_all </strong>commands to start/stop the master and all the   slaves. (They do NOT start/stop the security server.) In order to use this   feature, you need to update &quot;<strong>../conf/slaves.list</strong>&quot;. Sector will read this file and use &quot;ssh&quot; to start remote slaves.   The public SSH key of the master node must be put in the file   ~/.ssh/authorized_keys of all slave nodes before you can use these two commands. All slave nodes on this list can also be restarted   automatically by the master if the slave is not responsive.</p>
+  <p>If you do not start the slaves with the ./start_all command in the master directory, you can start each slave individually with <strong>./start_slave</strong> command under ./codeblue2/slave directory. This may be helpful for debuging purposes, since you can see all the output from the slaves. In addition, you can start new slaves at any time when the system is running. </p>
+</body>
+</html>

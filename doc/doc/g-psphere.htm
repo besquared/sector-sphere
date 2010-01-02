@@ -1,0 +1,72 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Sector/Sphere Manual</title>
+<link rel="stylesheet" href="sectordoc.css" type="text/css" /></head>
+</html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+</head>
+
+<body>
+<div class="ref_head">&nbsp;User's Guide </div>
+
+<h3><font color="#000080">Programming with Sphere </font></h3>
+<p><strong>Prerequisite</strong></p>
+<p>To use Sphere API, the application should include &lt;dcclient.h&gt;. In addition, certain header files in other directories (./common, ./gmp, and ./udt) may be required to be accessible. It is recommended that beginners write the first program in the same directory of the Sphere examples in ./client/examples.</p>
+<p><strong>Connect the Master</strong></p>
+<p>The client needs to know the address of the master node (IP and PORT). The Sector client can then be initialized by the <a href="r-c-client-init.htm">init</a> call. After that, the user can login with the user name and password. This process is encrypted using SSL. The qualifier &quot;Sector&quot; is an alias to the Sector class &quot;Client&quot;. All the connection and login API are global functions and there is no need for any local variables. </p>
+<div class="code"> Sector::init(IP, PORT);<br />
+Sector::login(&quot;test&quot;, &quot;xxx&quot;);</div>
+<p><strong>Prepare Input and Output </strong></p>
+<p>Every Sphere process requires an input parameter and an output parameter, both of which are of the type <a href="r-c-spherestream.htm">SphereStream</a>. A SphereStream is a data structure that contains a list of data files and the information about this data (size, number of records, etc.). The input stream can initialized with a list of files or directories and Sphere will retrieve the detailed data information from Sector.</p>
+<div class="code">
+  vector&lt;string&gt; files;<br />
+  files.insert(files.end(), &quot;/html&quot;);<br />
+  SphereStream s;<br />
+s.init(files);</div>
+<p>The output stream is usually initialized with the output directory, the file name prefix, and the number of files. In the following example, the Sphere computing result will written into directory &quot;/wordcount&quot;. There will be up to 256 files/buckets. Each file will have a name prefix of &quot;word_bucket&quot;. The results files are /wordcount/word_bucket.1, /wordcount/word_bucket.2, etc. </p>
+<div class="code"> SphereStream temp;<br />
+temp.setOutputPath(&quot;/wordcount&quot;, &quot;word_bucket&quot;);<br />
+temp.init(256);</div>
+<p><strong>Load User Defined Functions  </strong></p>
+<p>Each Sphere process requires one user defined function (UDF). The UDF should be prepared following <a href="g-udf.htm">this</a> instruction. After the UDF is successfully compiled, it needs to be uploaded by function <a href="r-c-sphereprocess-loadoperator.htm">SphereProcess.loadOperator</a>. </p>
+<p>Because Sphere uses C/C++ libraries, the UDF needs to be compiled under a compatible environment with the Sector slave servers. That is, the .so library files has be to recognized by the slave servers. </p>
+<p>Finally, any additional files other than the .so files can also be uploaded. For example, if the UDF requires another external file, this file can be uploaded as well. The location of these uploaded files will be stored in the <a href="r-c-sfile.htm">SFile</a> parameter of the UDF. </p>
+
+<p><strong>Start a Sphere Process</strong></p>
+<p>Once the input/output is prepared and the UDF is uploaded, the Sphere process (<a href="r-c-sphereprocess.htm">SphereProcess</a>) can be started with a single call <a href="r-c-sphereprocess-run.htm">SphereProcess.run</a>. </p>
+
+<div class="code">
+  int run(const SphereStream&amp; input, SphereStream&amp;   output, const string&amp; op, const int&amp; rows, const char* param = NULL,   const int&amp; size = 0);
+</div>
+
+<p>In the above function, the parameters &quot;input&quot; and &quot;output&quot; are the input and output streams prepared above. The parameter &quot;op&quot; is the name of the UDF. The parameter &quot;rows&quot; specifies the number of records to be passed to UDF each time. Finally, &quot;param&quot; and &quot;size&quot; are used to give a parameter to the UDF, if necessary. </p>
+<p><strong>Read Results and Check Progress</strong></p>
+<div class="code">
+  while (true)<br />
+  {<br />
+  &nbsp;&nbsp;SphereResult* res;<br />
+  &nbsp;&nbsp;if (myproc.read(res) &lt; 0)<br />
+    &nbsp;&nbsp;{<br />
+    &nbsp;&nbsp;&nbsp;&nbsp;if (myproc.checkProgress() &lt; 0)<br />
+    &nbsp;&nbsp;&nbsp;&nbsp;{<br />
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cerr &lt;&lt; &quot;all SPEs failed\n&quot;;<br />
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;break;<br />
+    &nbsp;&nbsp;&nbsp;&nbsp;}<br />
+	<br />
+  &nbsp;&nbsp;&nbsp;&nbsp;if (myproc.checkProgress() == 100)<br />
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;break;<br />
+    &nbsp;&nbsp;}<br />
+}</div>
+
+<p><strong>Disconnect and Logout the System </strong></p>
+<p>When the application does not need to access Sector any more, it should logout the user and disconnect from the system. </p>
+<div class="code"> Sector::logout();<br />
+Sector::close();<br />
+</div>
+</body>
+</html>
+

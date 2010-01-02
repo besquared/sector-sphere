@@ -1,0 +1,88 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<title>Sector/Sphere Manual</title>
+<link rel="stylesheet" href="sectordoc.css" type="text/css" />
+</head>
+
+<body>
+<div class="ref_head">Reference: Classes </div>
+
+<h4 class="func_name"><strong>SOutput</strong></h4>
+<p>The <b>SOutput</b> class is used to store the processing result of User Defined Functions (UDF). </p>
+
+<h5>Class Members</h5>
+
+
+ 
+<table width="100%" border="1" cellpadding="1" cellspacing="0" bordercolor="#CCCCCC">
+  <tr>
+    <td width="9%" class="table_headline"><strong>Member</strong></td>
+    <td width="16%" class="table_headline"><strong>Type</strong></td>
+    <td width="75%" class="table_headline"><strong>Description</strong></td>
+  </tr>
+  <tr>
+    <td><a href="r-t-download.html"></a> m_pcResult</td>
+    <td>char*</td>	
+    <td>The buffer to store the processing result </td>
+  </tr>
+  <tr>
+    <td>m_iBufSize</td>
+    <td>int</td>
+    <td>The physical size of the buffer m_pcResult </td>
+  </tr>
+  <tr>
+    <td>m_iResSize</td>
+    <td>int</td>
+    <td>Size of data stored in m_pcResult </td>
+  </tr>
+  <tr>
+    <td>m_pllIndex</td>
+    <td>int64_t*</td>
+    <td>Offset index of data stored in m_pcResult </td>
+  </tr>
+  <tr>
+    <td>m_iIndSize</td>
+    <td>int</td>
+    <td>The physical size (number of 64bit integers) of m_pllIndex </td>
+  </tr>
+  <tr>
+    <td>m_iRows</td>
+    <td>int</td>
+    <td>Number of rows/records of the result </td>
+  </tr>
+  <tr>
+    <td>m_piBucketID</td>
+    <td>int*</td>
+    <td>The bucket ID (hash value) of each record </td>
+  </tr>
+  <tr>
+    <td>m_llOffset</td>
+    <td>int64_t</td>
+    <td>If the input is a file name and there is no enough buffer to hold the result, the current processing may stop in the middle of the file. This parameter is used to store the current position, and the next call of the UDF will continue from this position. The value of this variable is 0 for the first call, and should be set to -1 when all data is processed.</td>
+  </tr>
+  <tr>
+    <td>m_strError</td>
+    <td>string</td>
+    <td>The text error message that can be sent back to the client application. </td>
+  </tr>
+</table>
+<h5><strong>Class Interfaces</strong></h5>
+<table width="100%" border="1" cellpadding="1" cellspacing="0" bordercolor="#CCCCCC">
+  <tr>
+    <td width="17%" class="table_headline"><strong>Method</strong></td>
+    <td width="83%" class="table_headline"><strong>Fuctionality</strong></td>
+  </tr>
+  <tr>
+    <td><a href="r-c-soutput-resizeidxbuf.htm">ResizeIdxBuf</a><a href="r-c-soutput-resizeidxbuf.htm"></a></td>
+    <td>resize the index buffer m_piiIndex </td>
+  </tr>
+  <tr>
+    <td><a href="r-c-soutput-resizeresbuf.htm"></a><a href="r-c-soutput-resizeresbuf.htm">resizeResBuf</a></td>
+    <td>resize the result buffer m_pcResult (e.g., when the system provided is not large enough) </td>
+  </tr>
+</table>
+<p><strong><a href="t-r-upload.html"></a></strong></p>
+</body>
+</html>

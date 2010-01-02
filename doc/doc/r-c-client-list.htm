@@ -1,0 +1,57 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<title>Sector/Sphere Manual</title>
+<link rel="stylesheet" href="sectordoc.css" type="text/css" />
+<style type="text/css">
+<!--
+.style4 {
+	color: #FFFFFF;
+	font-weight: bold;
+}
+-->
+</style>
+</head>
+
+<body>
+<div class="ref_head">Reference: Classes: Client </div>
+
+<h4 class="func_name"><strong>list</strong></h4>
+<p>The<strong> list  </strong>function retrieves the list of files or sub-directories of the specified directory. </p>
+
+<div class="code">
+  int list <br />
+  (<br />
+  &nbsp;&nbsp;&nbsp;const string&amp; <span class="style4">path</span>,<br />
+  &nbsp;&nbsp;&nbsp;vector&lt;SNode&gt;&amp; <span class="style4">attr</span><br />
+  );
+</div>
+
+<h5>Parameters</h5>
+
+<dl>
+  <dt><em>path</em></dt>
+  <dd>[in] the name of the directory.</dd>
+  <dt><em>attr</em></dt>
+  <dd>[out] a list of <strong>SNode</strong> attributes for every file or directory in the directory.</dd>
+</dl>
+<h5>Return Value</h5>
+<p>On success, the function return the number of SNode (file or sub-directories), or the size of <em>attr</em>. If error occurs, a negative value is returned. </p>
+<table width="100%" border="1" cellpadding="2" cellspacing="0" bordercolor="#CCCCCC">
+  <tr>
+    <td width="17%" class="table_headline"><strong>Error Name</strong></td>
+    <td width="17%" class="table_headline"><strong>Error Code</strong></td>
+    <td width="83%" class="table_headline"><strong>Comment</strong></td>
+  </tr>
+  <tr>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+  </tr>
+</table>
+<h5>Description</h5>
+<p>For each sub-directory, only its name is returned, no detailed information.</p>
+<p>&nbsp;</p>
+</body>
+</html>

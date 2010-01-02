@@ -1,0 +1,32 @@
+#Note: all values must start with a "TAB"
+
+#user's password
+PASSWORD
+	xxx
+
+#directories that the user can read, one per line
+#default is none, which means the user cannot read anything, same for write
+READ_PERMISSION
+	/test
+	/angle
+	/
+
+#directories that the user can write or modify
+WRITE_PERMISSION
+	/angle
+	/
+
+#if the user is allowed to run Sphere process, default is false.
+#All capital letters "TRUE" must be used, otherwise it will be treated as false
+EXEC_PERMISSION
+	TRUE
+
+#list of IP addresses from which the user is allowed to login, one per line.
+#this field must exist, otherwise the user will not be able to login
+ACL
+	0.0.0.0/0
+
+#the user's quota, which is the size limit of all the directories he/she has the write permission
+#unit is MB
+QUOTA
+	1000000

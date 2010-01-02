@@ -1,0 +1,70 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Sector/Sphere Manual</title>
+<link rel="stylesheet" href="sectordoc.css" type="text/css" />
+</head>
+</html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+</head>
+
+<body>
+<div class="ref_head">&nbsp;User's Guide </div>
+
+<h3><font color="#000080">How to Write a Sphere UDF </font></h3>
+<p>The Sphere user defined function is the routine that slaves will call for each   data segment. It must has the following format: </p>
+<div class="code">int _FUNCTION_(const SInput* input, SOutput* output, SFile*   file)</div>
+<p>Here _FUNCTION_ should be replaced by the real name of the data processing   function. This function should be compiled as a dynamic library file   _FUNCTION_.so. See the example Terasort processing functions (hash and sort) in   ./codeblue2/client/examples. Note that the function must be defined within   extern &quot;C&quot; {} because otherwise the function will not be located in the library   by its original name. </p>
+<p>The data structure SInput, SOutput, and SFile are defined in   ./common/sphere.h.</p>
+
+<div class="code">
+   struct SInput<br />
+   {<br />
+    &nbsp;&nbsp;char* m_pcUnit; // input data <br />
+    &nbsp;&nbsp;int m_iRows; // number of records/rows <br />
+    &nbsp;&nbsp;int64_t* m_pllIndex; // record index <br />
+    &nbsp;&nbsp;char* m_pcParam; // parameter, NULL is no parameter <br />
+    &nbsp;&nbsp;int m_iPSize; // size of the   parameter, 0 if no parameter <br />
+    };
+</div>
+
+<p>The input data is stored in &quot;m_pcUnit&quot;, the number of rows is in &quot;m_iRows&quot;,   and the index of these records are in m_pllIndex. The number of rows for each   processing is specified by the fourth parameter of the Sphere Process &quot;run&quot; API.   If there is no record/row defined (i.e., there is no index associated with the   data file), each input will be a data file. In this case the file name is stored   in m_pcUnit. The processing function can open and process this file. Finally, if   user defined parameter is required, they will be carried in &quot;m_pcParam&quot; and   &quot;m_iPSize&quot;. </p>
+
+<div class="code"> 
+struct SOutput<br />
+{<br />
+&nbsp;&nbsp;char* m_pcResult; // buffer to store the   result <br />
+&nbsp;&nbsp;int m_iBufSize; // size of the physical buffer: constant <br />
+&nbsp;&nbsp;int m_iResSize; // actual size of the result <br />
+&nbsp;&nbsp;int64_t* m_pllIndex; // record   index of the result <br />
+&nbsp;&nbsp;int m_iIndSize; // size of the index structure   (physical buffer size): constant <br />
+&nbsp;&nbsp;int m_iRows; // actual number of   records/rows returned <br />
+&nbsp;&nbsp;int* m_piBucketID; // list of bucket ID for each   output record <br />
+&nbsp;&nbsp;int64_t m_llOffset; // position that the last file   processing ends at <br />
+&nbsp;&nbsp;string m_strError;      // error text to be send back to client <br />
+};
+</div>
+
+<p>The output records should be stored in the SOutput data structure. The data   itself should be written into the memory buffer &quot;m_pcResult&quot; provided by Sphere.   The physical size of the buffer is specified by &quot;m_iBufSize&quot;. The real data size of the result should   be written into &quot;m_iResSize&quot;.</p>
+<p>The result also needs an index, which should be written into &quot;m_pllIndex&quot;. Similar   to the result buffer described above, the physical size of the index structure   is defined in &quot;m_iIndSize&quot;, in the unit of number of rows. The actual number of rows of   result is written into &quot;m_iRows&quot;. </p>
+<p>The result buffer &quot;m_pcResult&quot; and its index structure &quot;m_pllIndex&quot; are pre-allocated. In case that they are not large enough to hold the result, SOutput.resizeResBuf and SOutput.resizeIndBuf should be used to increase the buffers.</p>
+<p>The bucket is the most tricky part in Sphere. In many cases you need to merge the   results from all segments into one or more result files for further processing.   This is quite similar to the reduce part in MapReduce. For example, when   building an inverted index, you may want to send all words starting with the   same letter to the same result file and then process that file to generate part   of the index. You can assign a bucket id for each output record and Sphere will   send records with the same ID to the same file. The total number of buckets is   specified by the output stream structure (see below), and the bucket ID for each   record must not exceed that number (otherwise the data will be discarded).</p>
+<p>If the function processes a file and the file is too large or the result   cannot be held in the output buffer, you can stop the current processing and set   the &quot;m_llOffset&quot; value at the current file possition. Sphere will call the   function again and the processing can be resumed from that position. When the   file is completely processed, the value of &quot;m_llOffset&quot; must be set to -1.</p>
+
+<div class="code">
+    struct SFile<br />
+    {<br />
+    &nbsp;&nbsp;std::string m_strHomeDir; // Sector data home   directory: constant <br />
+    &nbsp;&nbsp;std::string m_strLibDir; // the directory that stores   the library files available to the current process: constant <br />
+    &nbsp;&nbsp;std::string   m_strTempDir; // the directory that can be used to store temporary files:   constant <br />
+    &nbsp;&nbsp;std::set  &lt;std::string&gt; m_sstrFiles; // list of modified   files<br />
+    };
+</div>
+
+<p>If the unit processing function needs to process a file, call a 3rd party   program, or generate new files, the SFile structure is designed for this   purpose. The string &quot;m_strHomeDir&quot; indicates where the input file is located on   the local disk. The string &quot;m_strLibDir&quot; indicates where the library files or   3rd party programs are located (those files that are uploaded by loadOperator).   Finally, if a new file is generated or an existing file is modified, insert   their names with relative directory path to the &quot;m_sstrFiles&quot; structure so that   Sector will refresh their metadata.</p>
+</body>
+</html>
+

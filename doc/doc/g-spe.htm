@@ -1,0 +1,54 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Sector/Sphere Manual</title>
+<link rel="stylesheet" href="sectordoc.css" type="text/css" />
+</head>
+</html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+</head>
+
+<body>
+<div class="ref_head">&nbsp;User's Guide </div>
+
+<h3><font color="#000080">Understanding the Sphere Programming Paradigm  </font></h3>
+<p>To introduce Sphere, consider the following example  application. Assume we have a collection of astronomical images from the Sloan  Digital Sky Survey and the goal is to find brown dwarfs (a stellar object) in  these images. The SDSS dataset is stored in <em>N</em> files, named SDSS1.dat, …,  SDSSn.dat, each consisting of one or more images.</p>
+<p>In order to access an image randomly in the dataset, we  built a record index for each file. The record index indicates the start and  end positions (i.e., offset and size) of each record (in this case, an image)  in the data file. The record indexes are named by adding an &quot;.idx&quot;  postfix to the data file name: SDSS1.dat.idx, …, SDSSn.dat.idx.</p>
+<p>To use Sphere, the user writes a function “findBrownDwarf”  to find brown dwarfs from each image. In this function, the input is an image  and its size, while the output indicates the brown dwarfs in &quot;result&quot;  of size &quot;rsize&quot;.</p>
+<div class="code">findBrownDwarf(char*  image, int isize, char* result, int rsize);</div>
+<p>A sequential program (pseudo code) for finding brown dwarfs  might look like this:</p>
+<div class="code">
+  for  each file F in (SDSS datasets)<br />
+  &nbsp;&nbsp;&nbsp;for each image I in F<br />
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;findBrownDwarf(I, …);
+</div>
+
+<p>Using the Sphere client API, the corresponding pseudo code  looks like this:</p>
+
+<div class="code"> 
+SphereStream sdss, output;<br />
+sdss.init(“/sdss”);<br />
+SphereProcess myproc;<br />
+myproc-&gt;run(sdss, &quot;findBrownDwarf&quot;, output, parameter);<br />
+myproc-&gt;read(result);
+</div>
+
+<p>In the code fragment above, &quot;sdss&quot; is a Sector  stream data structure that stores the metadata of the SDSS files. The  application can initialize the stream by giving it a list of file names or the  name of a directory if all files in the directory should be processed. Sphere  automatically retrieves the metadata from the Sector network. The user puts the  function into a dynamic library and uses the Sphere API to upload the library  to the slave nodes. The last three lines will simply start the job and wait for  the result using a small number of Sphere APIs. There is no need for users to  explicitly move data, nor do they need to know any information about the Sector  system except the location of the master nodes to which the client can connect.</p>
+
+<p>At the abstract level, Sphere allows users to define a data  processing function (UDF, or user defined function) that accepts a group of  Sector files as inputs, and writes the result to a group of Sector files as  outputs, when necessary. We use the term Sphere streams (or simplified as  streams) to describe the group of Sector files, either as inputs or outputs.</p>
+<p><strong>Inputs -&gt; UDF -&gt; Outputs</strong></p>
+<p>In the paradigm above, both the inputs and the outputs can  be single or multiple streams, whereas the outputs of one Sphere processing can  be the input of the next processing. A Sphere stream is split into multiple  data segments and is processed by Sphere Processing Engines (SPEs) on Sphere  slaves. An SPE processes each data segment by elements, which can be a data  record, a group of records, or a complete physical file. The relationship  between a Sphere stream, files, data segments, data elements, and SPE can be  found in Figure 1.</p>
+<p align="center"><img width="346" height="119" src="images/g-spe_clip_image002.gif" /></p>
+<p align="center">Figure 1. Sphere Stream, files, data segments, and  elements.</p>
+<p>In order to split a stream, an index file that contains the  position and size of each record in the stream can be defined by users and can  be permanently stored in Sector. If no index file exists, the minimum data  segment is a file (a stream is a group of files). For text files, an index can  be automatically generated as one record per line.</p>
+<p>The output from each data segment can be either sent back to  the client, written to local disk, or sent to multiple destinations according  to a user defined hashing function.</p>
+<p>Figure 2 shows a sorting process by Sphere (using a bucket  sort algorithm). In the first stage, each SPE reads a segment from local disk,  processes each record, and sends the record to the proper destination according  to the key. The output of the first stage is the intermediate stream. In the  second stage, each SPE sorts a local file in the stream. No data movement is  needed in the second stage.</p>
+<p align="center"><img width="247" height="293" src="images/g-spe_clip_image005.gif" /></p>
+<p align="center">Figure 2. Data flow of a sorting process.</p>
+<p>&nbsp;</p>
+</body>
+</html>
+

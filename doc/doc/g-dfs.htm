@@ -1,0 +1,24 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Sector/Sphere Manual</title>
+<link rel="stylesheet" href="sectordoc.css" type="text/css" /></head>
+</html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+</head>
+
+<body>
+<div class="ref_head">&nbsp;User's Guide </div>
+
+<h3><font color="#000080">Using Sector as a Distributed  File System </font></h3>
+<p>Sector can be regarded as a distributed storage/file system. It supports most file system semantics, such as directory, user access control, and common file access APIs (list, stat, mkdir, rm, open, close, read, and write). </p>
+<p>However, Sector is not a generic file system like NFS. Sector is designed for read intensive use scenarios. Because Sector makes replicas of files on different nodes inside the system, reading is much more efficient than writing. In addition, write is exclusive in Sector: when a file is being written, no other write or read operations can be permited on the file.</p>
+<p>Sector is supposed to be set up over clusters of commodity computers, with high speed network connections (1Gb/s, 10Gb/s, etc.) between any two nodes and two clusters. The clusters can be within one data center or even accross wide area networks. </p>
+<p>Unlike Google's GFS or Hadoop HDFS, Sector does not split files into smaller blocks. The advantage of this strategy is better robustness due to the simplicity and better performance over wide area networks. Amazon S3 also has a size limit on each file. Although Sector does not have a hard size limit (a user can still have any size of files as long as there is one node in the system that has enough space for the file), it is highly recommended for users to use proper sized files for better efficiency. A good choice of file size may depend on the total data size, the total number of nodes (can be obtained from the &quot;sysinfo&quot; command), and how the applications  use the data. </p>
+<p>&nbsp;</p>
+</body>
+</html>
+

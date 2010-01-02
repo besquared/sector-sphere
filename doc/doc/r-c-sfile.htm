@@ -1,0 +1,50 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<title>Sector/Sphere Manual</title>
+<link rel="stylesheet" href="sectordoc.css" type="text/css" />
+</head>
+
+<body>
+<div class="ref_head">Reference: Classes </div>
+
+<h4 class="func_name"><strong>SFile</strong></h4>
+<p>The <b>SFile</b> class is used as one of the parameters in Sphere User Defined Functions (UDFs). It is used to pass file related information between Sphere server and UDF. </p>
+
+<h5>Class Members</h5>
+
+
+ 
+<table width="100%" border="1" cellpadding="1" cellspacing="0" bordercolor="#CCCCCC">
+  <tr>
+    <td width="9%" class="table_headline"><strong>Member</strong></td>
+    <td width="16%" class="table_headline"><strong>Type</strong></td>
+    <td width="75%" class="table_headline"><strong>Description</strong></td>
+  </tr>
+  <tr>
+    <td><a href="r-t-download.html"></a> m_strHomeDir</td>
+    <td>string</td>	
+    <td>The base directory of the Sector file storage on the current slave node. </td>
+  </tr>
+  <tr>
+    <td>m_strLibDir</td>
+    <td>string</td>
+    <td>The directory that stores user uploaded library files in the current session. </td>
+  </tr>
+  <tr>
+    <td>m_strTempDir</td>
+    <td>string</td>
+    <td>The directory that UDF can write temporary data to. </td>
+  </tr>
+  <tr>
+    <td>m_sstrFiles</td>
+    <td>set&lt;string&gt;</td>
+    <td>A set of user modified files. Sector uses this list to update the file system. </td>
+  </tr>
+</table>
+<h5><strong>Class Interfaces</strong></h5>
+<p>There is no public interface for this class.</p>
+<p>&nbsp;</p>
+</body>
+</html>

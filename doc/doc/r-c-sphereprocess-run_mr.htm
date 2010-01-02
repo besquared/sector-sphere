@@ -1,0 +1,69 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<title>Sector/Sphere Manual</title>
+<link rel="stylesheet" href="sectordoc.css" type="text/css" />
+<style type="text/css">
+<!--
+.style3 {
+	color: #FFFFFF;
+	font-weight: bold;
+}
+-->
+</style>
+</head>
+
+<body>
+<div class="ref_head">Reference: Classes: SphereProcess </div>
+
+<h4 class="func_name"><strong>run_mr</strong></h4>
+<p>The<strong> run_mr </strong>function starts the execution of a Sphere MapReduce process. </p>
+
+<div class="code">
+  int run_mr <br />
+  (<br />
+  &nbsp;&nbsp;&nbsp;const SphereStream&amp; <span class="style3">input</span>,<br />
+  &nbsp;&nbsp;&nbsp;SphereStream&amp; <span class="style3">output</span>,<br />
+  &nbsp;&nbsp;&nbsp;const string&amp; <span class="style3">mr</span>,<br />
+  &nbsp;&nbsp;&nbsp;const int&amp; <span class="style3">rows</span>,<br />
+  &nbsp;&nbsp;&nbsp;const char* <span class="style3">param</span> = NULL,<br />
+  &nbsp;&nbsp;&nbsp;const int&amp; <span class="style3">size</span> = 0<br />
+  );</div>
+
+<h5>Parameters</h5>
+
+<dl>
+  <dt><em>input</em></dt>
+  <dd>[in] the input stream for the Sphere processing </dd>
+  <dt><em>output</em></dt>
+  <dd>[out] the output stream that stores the processing result files </dd>
+  <dt><em>mr</em></dt>
+  <dd>[in] the name of the user defined function </dd>
+  <dt><em>rows</em></dt>
+  <dd>[in] how many rows should Sphere process each time, -1: the complete data segment, 0: the file, n&gt;1: n rows </dd>
+  <dt><em>param</em></dt>
+  <dd>[in] parameter for the user defined function</dd>
+  <dt><em>size</em></dt>
+  <dd>[in] size of the parameter buffer </dd>
+</dl>
+<h5>Return Value</h5>
+<p>On success, the function returns 0. If error occurs, a negative value is returned. </p>
+<table width="100%" border="1" cellpadding="2" cellspacing="0" bordercolor="#CCCCCC">
+  <tr>
+    <td width="17%" class="table_headline"><strong>Error Name</strong></td>
+    <td width="17%" class="table_headline"><strong>Error Code</strong></td>
+    <td width="83%" class="table_headline"><strong>Comment</strong></td>
+  </tr>
+  <tr>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+  </tr>
+</table>
+<h5>Description</h5>
+<p>This function is used to run a MapReduce process. </p>
+<h5><strong>See Also</strong></h5>
+<p><strong><a href="r-c-sphereprocess-run.htm">run</a></strong>, <strong><a href="r-c-sphereprocess-read.htm">read</a> </strong></p>
+</body>
+</html>

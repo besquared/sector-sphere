@@ -1,0 +1,63 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<title>Sector/Sphere Manual</title>
+<link rel="stylesheet" href="sectordoc.css" type="text/css" />
+<style type="text/css">
+<!--
+.style2 {
+	color: #FFFFFF;
+	font-weight: bold;
+}
+-->
+</style>
+</head>
+
+<body>
+<div class="ref_head">Reference: Classes: SphereProcess </div>
+
+<h4 class="func_name"><strong>read</strong></h4>
+<p>The<strong> read </strong>function retrieves the processing status and result of each data segment. </p>
+
+<div class="code">
+  int read <br />
+  (<br />
+  &nbsp;&nbsp;&nbsp;SphereResult*&amp; <span class="style2">res</span>,<br />
+  &nbsp;&nbsp;&nbsp;const bool&amp; <span class="style2">inorder</span> = false, <br />
+  &nbsp;&nbsp;&nbsp;const bool&amp; <span class="style2">wait</span> = true)<br />
+  );
+</div>
+
+<h5>Parameters</h5>
+
+<dl>
+  <dt><em>res</em></dt>
+  <dd>[out] the pointer to a <a href="r-c-sphereresult.htm">SphereResult</a> structure. </dd>
+  <dt><em>inorder</em></dt>
+  <dd>[in] whether to read the result in the same order of the data segments. IGNORED!</dd>
+  <dt><em>wait</em></dt>
+  <dd>[in] whether to wait if there is no result available. The waiting time is 10 seconds. </dd>
+</dl>
+<h5>Return Value</h5>
+<p>On success, the function returns 1. If error occurs, a negative value is returned. </p>
+<table width="100%" border="1" cellpadding="2" cellspacing="0" bordercolor="#CCCCCC">
+  <tr>
+    <td width="17%" class="table_headline"><strong>Error Name</strong></td>
+    <td width="17%" class="table_headline"><strong>Error Code</strong></td>
+    <td width="83%" class="table_headline"><strong>Comment</strong></td>
+  </tr>
+  <tr>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+    <td>&nbsp;</td>
+  </tr>
+</table>
+<h5>Description</h5>
+<p>This function retrieves the processing status of error data segment, either it is a success or a failure. If the data segment is successfully processed, the result may be carried back in the <a href="r-c-sphereresult.htm">SphereResult</a> structure, if the client program has initialized the output stream with 0 file (i.e., no output stream). The result filled in the <a href="r-c-soutput.htm">SOutput</a> structure in the UDF will be returned to the client. If the output stream does exist, the results in <a href="r-c-soutput.htm">SOutput</a> will be written into Sector files and the <strong>read</strong> function will not get any result.</p>
+<p>Note that even if there is no output stream specified, the UDF can also write the results to a local file on the slave node and acknowledge Sector by filling the <a href="r-c-sfile.htm">SFile</a> structure. In this case, UDF may leave <a href="r-c-soutput.htm">SOutput</a> empty so no result will be sent back to the client. </p>
+<p>If error occurs during the processing of a data segment, the UDF can also fill error information to the <a href="r-c-soutput.htm">SOutput</a> parameter and the error message will be seen at the client side as well.</p>
+<p>The <strong>read</strong> function is useful is the result is relatively small. For example, the Sphere program is to get the md5sum on a list of files. Large results SHOULD NOT be returned to the client.</p>
+<p>Finally, <strong>read</strong> also serves as a blocking function in order to check the progress of a Sphere process. This function will block itself for up to 10 seconds and will be signaled by an update on any data segment. </p>
+</body>
+</html>
