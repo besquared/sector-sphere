@@ -87,6 +87,10 @@ private:
    };
    static void* serviceEx(void* p);
 
+   int processSlaveJoin(SSLTransport& s, SSLTransport& secconn, const std::string& ip);
+   int processUserJoin(SSLTransport& s, SSLTransport& secconn, const std::string& ip);
+   int processMasterJoin(SSLTransport& s, SSLTransport& secconn, const std::string& ip);
+
    static void* process(void* s);
 
    int processSysCmd(const char* ip, const int port,  const ActiveUser* user, const int32_t key, int id, SectorMsg* msg);

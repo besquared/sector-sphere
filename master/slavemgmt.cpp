@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright (c) 2005 - 2009, The Board of Trustees of the University of Illinois.
+Copyright (c) 2005 - 2010, The Board of Trustees of the University of Illinois.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 02/19/2009
+   Yunhong Gu, last updated 01/02/2010
 *****************************************************************************/
 
 #include <slavemgmt.h>
@@ -44,6 +44,7 @@ written by
 #include <sys/types.h>
 #include <common.h>
 #include <constant.h>
+#include <meta.h>
 
 using namespace std;
 
@@ -143,6 +144,16 @@ int SlaveManager::insert(SlaveNode& sn)
 
    pc->second.m_sNodes.insert(sn.m_iNodeID);
 
+   map<string, set<string> >::iterator i = m_mIPFSInfo.find(sn.m_strIP);
+   if (i == m_mIPFSInfo.end())
+   {
+      set<string> tmp;
+      tmp.insert(Metadata::revisePath(sn.m_strStoragePath));
+      m_mIPFSInfo[sn.m_strIP] = tmp;
+   }
+   else
+      i->second.insert(sn.m_strStoragePath);
+
    return 1;
 }
 
@@ -181,9 +192,42 @@ int SlaveManager::remove(int nodeid)
 
    pc->second.m_sNodes.erase(nodeid);
 
+   map<string, set<string> >::iterator i = m_mIPFSInfo.find(sn->second.m_strIP);
+   if (i != m_mIPFSInfo.end())
+   {
+      i->second.erase(sn->second.m_strStoragePath);
+      if (i->second.empty())
+         m_mIPFSInfo.erase(i);
+   }
+   else
+   {
+      //something wrong
+   }
+
    m_mSlaveList.erase(sn);
 
    return 1;
+}
+
+bool SlaveManager::checkDuplicateSlave(const string& ip, const string& path)
+{
+   CGuard sg(m_SlaveLock);
+
+   map<string, set<string> >::iterator i = m_mIPFSInfo.find(ip);
+   if (i == m_mIPFSInfo.end())
+      return false;
+
+   string revised_path = Metadata::revisePath(path);
+   for (set<string>::iterator j = i->second.begin(); j != i->second.end(); ++ j)
+   {
+      // if there is overlap between the two storage paths, it means that there is a conflict
+      // the new slave should be rejected in this case
+
+      if ((j->find(revised_path) != string::npos) || (revised_path.find(*j) != string::npos))
+         return true;
+   }
+
+   return false;
 }
 
 int SlaveManager::chooseReplicaNode(set<int>& loclist, SlaveNode& sn, const int64_t& filesize)

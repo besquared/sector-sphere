@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 01/01/2010
+   Yunhong Gu, last updated 01/03/2010
 *****************************************************************************/
 
 
@@ -177,14 +177,19 @@ int Slave::connect()
          }
       }
 
-      int cmd = 1;
+      int32_t cmd = 1;
       secconn.send((char*)&cmd, 4);
-      int res = -1;
+
+      int32_t size = m_strHomeDir.length() + 1;
+      secconn.send((char*)&size, 4);
+      secconn.send(m_strHomeDir.c_str(), size);
+
+      int32_t res = -1;
       secconn.recv((char*)&res, 4);
       if (res < 0)
       {
-         cerr << "security check failed. code: " << res << endl;
-         return -1;
+         cerr << "slave join rejected. code: " << res << endl;
+         return res;
       }
 
       secconn.send((char*)&m_iLocalPort, 4);
@@ -197,7 +202,7 @@ int Slave::connect()
 
       struct stat s;
       stat((m_strHomeDir + ".tmp/metadata.dat").c_str(), &s);
-      int32_t size = s.st_size;
+      size = s.st_size;
       secconn.send((char*)&size, 4);
       secconn.sendfile((m_strHomeDir + ".tmp/metadata.dat").c_str(), 0, size);
 
@@ -247,7 +252,7 @@ int Slave::connect()
       for (int i = 0; i < num; ++ i)
       {
          char ip[64];
-         int size = 0;
+         size = 0;
          secconn.recv((char*)&id, 4);
          secconn.recv((char*)&size, 4);
          secconn.recv(ip, size);

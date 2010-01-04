@@ -56,6 +56,8 @@ public:
    int insert(SlaveNode& sn);
    int remove(int nodeid);
 
+   bool checkDuplicateSlave(const std::string& ip, const std::string& path);
+
 public:
    int chooseReplicaNode(std::set<int>& loclist, SlaveNode& sn, const int64_t& filesize);
    int chooseIONode(std::set<int>& loclist, const Address& client, int mode, std::vector<SlaveNode>& sl, int replica);
@@ -77,6 +79,9 @@ public:
 
    Topology m_Topology;
    Cluster m_Cluster;
+
+private:
+   std::map<std::string, std::set<std::string> > m_mIPFSInfo;
 
 private:
    pthread_mutex_t m_SlaveLock;

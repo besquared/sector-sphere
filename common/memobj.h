@@ -44,6 +44,7 @@ written by
 
 #include <string>
 #include <map>
+#include <vector>
 #include <pthread.h>
 
 struct MemObj

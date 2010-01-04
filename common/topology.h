@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright (c) 2005 - 2009, The Board of Trustees of the University of Illinois.
+Copyright (c) 2005 - 2010, The Board of Trustees of the University of Illinois.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 04/17/2009
+   Yunhong Gu, last updated 01/02/2010
 *****************************************************************************/
 
 
@@ -67,35 +67,37 @@ struct AddrComp
 class SlaveNode
 {
 public:
-   int m_iNodeID;
+   int m_iNodeID;					// unique slave node ID
 
    //Address m_Addr;
-   std::string m_strIP;
-   std::string m_strPublicIP;
-   int m_iPort;
-   int m_iDataPort;
+   std::string m_strIP;					// ip address (used for internal communication)
+   std::string m_strPublicIP;				// public ip address, used for client communication. currently NOT used
+   int m_iPort;						// GMP control port number
+   int m_iDataPort;					// UDT data channel port number
 
-   int64_t m_llAvailDiskSpace;
-   int64_t m_llTotalFileSize;
+   std::string m_strStoragePath;			// data storage path on the local file system
 
-   int64_t m_llTimeStamp;
-   int64_t m_llCurrMemUsed;
-   int64_t m_llCurrCPUUsed;
-   int64_t m_llTotalInputData;
-   int64_t m_llTotalOutputData;
-   std::map<std::string, int64_t> m_mSysIndInput;
-   std::map<std::string, int64_t> m_mSysIndOutput;
-   std::map<std::string, int64_t> m_mCliIndInput;
-   std::map<std::string, int64_t> m_mCliIndOutput;
+   int64_t m_llAvailDiskSpace;				// available disk space
+   int64_t m_llTotalFileSize;				// total data size
 
-   int64_t m_llLastUpdateTime;
-   int m_iRetryNum;
-   int m_iStatus;		// 0: inactive 1: active-normal 2: active-disk full
+   int64_t m_llTimeStamp;				// last statistics refresh time
+   int64_t m_llCurrMemUsed;				// physical memory used by the slave
+   int64_t m_llCurrCPUUsed;				// CPU percentage used by the slave
+   int64_t m_llTotalInputData;				// total network input
+   int64_t m_llTotalOutputData;				// total network output
+   std::map<std::string, int64_t> m_mSysIndInput;	// network input from each other slave
+   std::map<std::string, int64_t> m_mSysIndOutput;	// network outout to each other slave
+   std::map<std::string, int64_t> m_mCliIndInput;	// network input from each client
+   std::map<std::string, int64_t> m_mCliIndOutput;	// network output to each client
 
-   std::set<int> m_sBadVote;	// set of bad votes by other slaves
-   int64_t m_llLastVoteTime;	// timestamp of last vote
+   int64_t m_llLastUpdateTime;				// last update time
+   int m_iRetryNum;					// number of retries since lost communication
+   int m_iStatus;					// 0: inactive 1: active-normal 2: active-disk full
 
-   std::vector<int> m_viPath;
+   std::set<int> m_sBadVote;				// set of bad votes by other slaves
+   int64_t m_llLastVoteTime;				// timestamp of last vote
+
+   std::vector<int> m_viPath;				// topology path, from root to this node on the tree structure
 
 public:
    int deserialize(const char* buf, int size);
