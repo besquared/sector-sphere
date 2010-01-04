@@ -74,6 +74,7 @@ public:
 
 public: // internal error
    static const int E_MASTER = -101;		// incorrect master node to handle the request
+   static const int E_REPSLAVE = -102;		// slave is already in the system; conflict
 
 public:
    static int init();

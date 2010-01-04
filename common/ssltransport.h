@@ -80,8 +80,10 @@ private:
    BIO* m_pBIO;
    int m_iSocket;
 
+   bool m_bConnected;
+
 private:
-   static int s_iInstance;
+   static int g_iInstance;
 };
 
 #endif

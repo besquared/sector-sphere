@@ -57,6 +57,8 @@ m_iTopoDataSize(0)
 {
    pthread_mutex_init(&m_ReplicaLock, NULL);
    pthread_cond_init(&m_ReplicaCond, NULL);
+
+   SSLTransport::init();
 }
 
 Master::~Master()
@@ -66,6 +68,8 @@ Master::~Master()
    delete [] m_pcTopoData;
    pthread_mutex_destroy(&m_ReplicaLock);
    pthread_cond_destroy(&m_ReplicaCond);
+
+   SSLTransport::destroy();
 }
 
 int Master::init()
@@ -161,7 +165,6 @@ int Master::init()
    }
 
    //connect security server to get ID
-   SSLTransport::init();
    SSLTransport secconn;
    if (secconn.initClientCTX("../conf/security_node.cert") < 0)
    {
@@ -169,11 +172,9 @@ int Master::init()
       return -1;
    }
    secconn.open(NULL, 0);
-   int r = secconn.connect(m_SysConfig.m_strSecServIP.c_str(), m_SysConfig.m_iSecServPort);
-   if (r < 0)
+   if (secconn.connect(m_SysConfig.m_strSecServIP.c_str(), m_SysConfig.m_iSecServPort) < 0)
    {
       secconn.close();
-      SSLTransport::destroy();
       m_SectorLog.insert("Failed to find security server.");
       return -1;
    }
@@ -182,7 +183,6 @@ int Master::init()
    secconn.send((char*)&cmd, 4);
    secconn.recv((char*)&m_iRouterKey, 4);
    secconn.close();
-   SSLTransport::destroy();
 
    Address addr;
    addr.m_strIP = "";
@@ -216,8 +216,6 @@ int Master::init()
 int Master::join(const char* ip, const int& port)
 {
    // join the server
-   SSLTransport::init();
-
    string cert = "../conf/master_node.cert";
 
    SSLTransport s;
@@ -311,7 +309,6 @@ int Master::join(const char* ip, const int& port)
    unlink(".tmp/master_meta.dat");
 
    s.close();
-   SSLTransport::destroy();
 
    return 0;
 }
@@ -547,20 +544,22 @@ int Master::run()
       }
    }
 
-   return 1;
+   return 0;
 }
 
 int Master::stop()
-{   m_Status = STOPPED;
+{
+   m_Status = STOPPED;
 
-   return 1;
+   m_SecSrvConn.close();
+
+   return 0;
 }
 
 void* Master::service(void* s)
 {
    Master* self = (Master*)s;
 
-   SSLTransport::init();
    SSLTransport serv;
    if (serv.initServerCTX("../conf/master_node.cert", "../conf/master_node.key") < 0)
    {
@@ -589,8 +588,6 @@ void* Master::service(void* s)
       pthread_detach(t);
    }
 
-   SSLTransport::destroy();
-
    return NULL;
 }
 
@@ -603,49 +600,53 @@ void* Master::serviceEx(void* p)
    string ip = ((Param*)p)->ip;
    //int port = ((Param*)p)->port;
 
-   SSLTransport secconn;
-   if (secconn.initClientCTX("../conf/security_node.cert") < 0)
-   {
-      self->m_SectorLog.insert("No security node certificate found. All slave/client connection will be rejected.");
-      return NULL;
-   }
-   secconn.open(NULL, 0);
-   int r = secconn.connect(self->m_SysConfig.m_strSecServIP.c_str(), self->m_SysConfig.m_iSecServPort);
-
    int32_t cmd;
    if (s->recv((char*)&cmd, 4) < 0)
       goto EXIT;
 
-   if (r < 0)
+   if (self->m_SecSrvConn.send((char*)&cmd, 4) < 0)
    {
-      cmd = SectorError::E_NOSECSERV;
-      s->send((char*)&cmd, 4);
-      goto EXIT;
+      //if the permanent connection to the security server is broken, re-connect
+
+      self->m_SecSrvConn.close();
+      if (self->m_SecSrvConn.initClientCTX("../conf/security_node.cert") < 0)
+      {
+         self->m_SectorLog.insert("No security node certificate found. All slave/client connection will be rejected.");
+         return NULL;
+      }
+      self->m_SecSrvConn.open(NULL, 0);
+      if (self->m_SecSrvConn.connect(self->m_SysConfig.m_strSecServIP.c_str(), self->m_SysConfig.m_iSecServPort) < 0)
+      {
+         cmd = SectorError::E_NOSECSERV;
+         s->send((char*)&cmd, 4);
+         goto EXIT;
+      }
+
+      self->m_SecSrvConn.send((char*)&cmd, 4);
    }
 
    switch (cmd)
    {
    case 1: // slave node join
-      self->processSlaveJoin(*s, secconn, ip);
+      self->processSlaveJoin(*s, ip);
       break;
 
    case 2: // user login
-      self->processUserJoin(*s, secconn, ip);
+      self->processUserJoin(*s, ip);
       break;
 
    case 3: // master join
-      self->processMasterJoin(*s, secconn, ip);
+      self->processMasterJoin(*s, ip);
       break;
    }
 
 EXIT:
-   secconn.close();
    s->close();
 
    return NULL;
 }
 
-int Master::processSlaveJoin(SSLTransport& s, SSLTransport& secconn, const string& ip)
+int Master::processSlaveJoin(SSLTransport& s, const string& ip)
 {
    // recv local storage path, avoid same slave joining more than once
    int32_t size = 0;
@@ -658,16 +659,13 @@ int Master::processSlaveJoin(SSLTransport& s, SSLTransport& secconn, const strin
    }
 
    int32_t res = -1;
+   char slaveIP[64];
+   strcpy(slaveIP, ip.c_str());
+   m_SecSrvConn.send(slaveIP, 64);
+   m_SecSrvConn.recv((char*)&res, 4);
 
-   if ((lspath != NULL) && !m_SlaveManager.checkDuplicateSlave(ip, lspath))
-   {
-      int32_t cmd = 1;
-      secconn.send((char*)&cmd, 4);
-      char slaveIP[64];
-      strcpy(slaveIP, ip.c_str());
-      secconn.send(slaveIP, 64);
-      secconn.recv((char*)&res, 4);
-   }
+   if ((lspath == NULL) || m_SlaveManager.checkDuplicateSlave(ip, lspath))
+      res = SectorError::E_REPSLAVE;
 
    s.send((char*)&res, 4);
 
@@ -770,23 +768,21 @@ int Master::processSlaveJoin(SSLTransport& s, SSLTransport& secconn, const strin
    return 0;
 }
 
-int Master::processUserJoin(SSLTransport& s, SSLTransport& secconn, const std::string& ip)
+int Master::processUserJoin(SSLTransport& s, const std::string& ip)
 {
    char user[64];
    s.recv(user, 64);
    char password[128];
    s.recv(password, 128);
 
-   int32_t cmd = 2;
-   secconn.send((char*)&cmd, 4);
-   secconn.send(user, 64);
-   secconn.send(password, 128);
+   m_SecSrvConn.send(user, 64);
+   m_SecSrvConn.send(password, 128);
    char clientIP[64];
    strcpy(clientIP, ip.c_str());
-   secconn.send(clientIP, 64);
+   m_SecSrvConn.send(clientIP, 64);
 
    int32_t key = 0;
-   secconn.recv((char*)&key, 4);
+   m_SecSrvConn.recv((char*)&key, 4);
 
    int32_t ukey;
    s.recv((char*)&ukey, 4);
@@ -815,26 +811,26 @@ int Master::processUserJoin(SSLTransport& s, SSLTransport& secconn, const std::s
       int32_t size = 0;
       char* buf = NULL;
 
-      secconn.recv((char*)&size, 4);
+      m_SecSrvConn.recv((char*)&size, 4);
       if (size > 0)
       {
          buf = new char[size];
-         secconn.recv(buf, size);
+         m_SecSrvConn.recv(buf, size);
          au.deserialize(au.m_vstrReadList, buf);
          delete [] buf;
       }
 
-      secconn.recv((char*)&size, 4);
+      m_SecSrvConn.recv((char*)&size, 4);
       if (size > 0)
       {
          buf = new char[size];
-         secconn.recv(buf, size);
+         m_SecSrvConn.recv(buf, size);
          au.deserialize(au.m_vstrWriteList, buf);
          delete [] buf;
       }
 
       int32_t exec;
-      secconn.recv((char*)&exec, 4);
+      m_SecSrvConn.recv((char*)&exec, 4);
       au.m_bExec = exec;
 
       m_mActiveUser[au.m_iKey] = au;
@@ -875,15 +871,13 @@ int Master::processUserJoin(SSLTransport& s, SSLTransport& secconn, const std::s
    return 0;
 }
 
-int Master::processMasterJoin(SSLTransport& s, SSLTransport& secconn, const std::string& ip)
+int Master::processMasterJoin(SSLTransport& s, const std::string& ip)
 {
-   int32_t cmd = 3;
-   secconn.send((char*)&cmd, 4);
    char masterIP[64];
    strcpy(masterIP, ip.c_str());
-   secconn.send(masterIP, 64);
+   m_SecSrvConn.send(masterIP, 64);
    int32_t res = -1;
-   secconn.recv((char*)&res, 4);
+   m_SecSrvConn.recv((char*)&res, 4);
 
    s.send((char*)&res, 4);
 

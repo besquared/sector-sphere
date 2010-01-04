@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright (c) 2005 - 2009, The Board of Trustees of the University of Illinois.
+Copyright (c) 2005 - 2010, The Board of Trustees of the University of Illinois.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 12/12/2009
+   Yunhong Gu, last updated 01/03/2010
 *****************************************************************************/
 
 
@@ -87,9 +87,9 @@ private:
    };
    static void* serviceEx(void* p);
 
-   int processSlaveJoin(SSLTransport& s, SSLTransport& secconn, const std::string& ip);
-   int processUserJoin(SSLTransport& s, SSLTransport& secconn, const std::string& ip);
-   int processMasterJoin(SSLTransport& s, SSLTransport& secconn, const std::string& ip);
+   int processSlaveJoin(SSLTransport& s, const std::string& ip);
+   int processUserJoin(SSLTransport& s, const std::string& ip);
+   int processMasterJoin(SSLTransport& s, const std::string& ip);
 
    static void* process(void* s);
 
@@ -135,13 +135,14 @@ private:
    char* m_pcTopoData;					// serialized topology data
    int m_iTopoDataSize;					// size of the topology data
 
-private:
-   std::map<std::string, SlaveAddr> m_mSlaveAddrRec;
-   void loadSlaveAddr(const std::string& file);
+   Routing m_Routing;					// master routing module
+   uint32_t m_iRouterKey;				// identification for this master
 
-private: // master routing
-   Routing m_Routing;
-   uint32_t m_iRouterKey;
+   SSLTransport m_SecSrvConn;				// connection to the security server
+
+private:
+   std::map<std::string, SlaveAddr> m_mSlaveAddrRec;	// slave and its executale path
+   void loadSlaveAddr(const std::string& file);
 };
 
 #endif

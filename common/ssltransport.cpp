@@ -52,13 +52,14 @@ written by
 #include <iostream>
 using namespace std;
 
-int SSLTransport::s_iInstance = 0;
+int SSLTransport::g_iInstance = 0;
 
 SSLTransport::SSLTransport():
 m_pCTX(NULL),
 m_pSSL(NULL),
 m_pBIO(NULL),
-m_iSocket(0)
+m_iSocket(0),
+m_bConnected(false)
 {
 }
 
@@ -74,7 +75,7 @@ SSLTransport::~SSLTransport()
 
 void SSLTransport::init()
 {
-   if (0 == s_iInstance)
+   if (0 == g_iInstance)
    {
       SSL_load_error_strings();
       ERR_load_BIO_strings();
@@ -82,12 +83,12 @@ void SSLTransport::init()
       SSL_library_init();
    }
 
-   s_iInstance ++;
+   g_iInstance ++;
 }
 
 void SSLTransport::destroy()
 {
-   s_iInstance --;
+   g_iInstance --;
 }
 
 int SSLTransport::initServerCTX(const char* cert, const char* key)
@@ -175,6 +176,8 @@ SSLTransport* SSLTransport::accept(char* ip, int& port)
    if (SSL_accept(t->m_pSSL) <= 0)
       return NULL;
 
+   t->m_bConnected = true;
+
    return t;
 }
 
@@ -222,16 +225,22 @@ int SSLTransport::connect(const char* host, const int& port)
    //   return -1;
    //}
 
+   m_bConnected = true;
+
    return 1;
 }
 
 int SSLTransport::close()
 {
+   m_bConnected = false;
    return ::close(m_iSocket);
 }
 
 int SSLTransport::send(const char* data, const int& size)
 {
+   if (!m_bConnected)
+      return -1;
+
    int ts = size;
    while (ts > 0)
    {
@@ -245,6 +254,9 @@ int SSLTransport::send(const char* data, const int& size)
 
 int SSLTransport::recv(char* data, const int& size)
 {
+   if (!m_bConnected)
+      return -1;
+
    int tr = size;
    while (tr > 0)
    {
@@ -258,6 +270,9 @@ int SSLTransport::recv(char* data, const int& size)
 
 int64_t SSLTransport::sendfile(const char* file, const int64_t& offset, const int64_t& size)
 {
+   if (!m_bConnected)
+      return -1;
+
    ifstream ifs(file, ios::in | ios::binary);
 
    if (ifs.bad() || ifs.fail())
@@ -282,6 +297,9 @@ int64_t SSLTransport::sendfile(const char* file, const int64_t& offset, const in
 
 int64_t SSLTransport::recvfile(const char* file, const int64_t& offset, const int64_t& size)
 {
+   if (!m_bConnected)
+      return -1;
+
    fstream ofs(file, ios::out | ios::binary);
 
    if (ofs.bad() || ofs.fail())

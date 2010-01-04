@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright (c) 2005 - 2009, The Board of Trustees of the University of Illinois.
+Copyright (c) 2005 - 2010, The Board of Trustees of the University of Illinois.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 11/03/2009
+   Yunhong Gu, last updated 01/04/2010
 *****************************************************************************/
 
 #include "security.h"
@@ -189,12 +189,14 @@ void* SServer::process(void* p)
    SServer* self = ((Param*)p)->sserver;
    SSLTransport* s = ((Param*)p)->ssl;
 
-   int32_t cmd;
-   if (s->recv((char*)&cmd, 4) <= 0)
-      goto EXIT;
-
-   switch (cmd)
+   while (true)
    {
+      int32_t cmd;
+      if (s->recv((char*)&cmd, 4) <= 0)
+         goto EXIT;
+
+      switch (cmd)
+      {
       case 1: // slave node join
       {
          char ip[64];
@@ -280,6 +282,7 @@ void* SServer::process(void* p)
 
       default:
          goto EXIT;
+      }
    }
 
 EXIT:
