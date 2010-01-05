@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright (c) 2005 - 2009, The Board of Trustees of the University of Illinois.
+Copyright (c) 2005 - 2010, The Board of Trustees of the University of Illinois.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 09/16/2009
+   Yunhong Gu, last updated 01/04/2010
 *****************************************************************************/
 
 #include <slave.h>
@@ -584,11 +584,6 @@ void* Slave::SPEShuffler(void* p)
       if (r < 0)
          continue;
 
-      int dataport = *(int32_t*)msg.getData();
-      int session = *(int32_t*)(msg.getData() + 4);
-      int totalnum = *(int32_t*)(msg.getData() + 8);
-      int totalsize = *(int32_t*)(msg.getData() + 12);
-
       if (*pendingSize > 256000000)
       {
          // too many incoming results, ask the sender to wait
@@ -599,17 +594,17 @@ void* Slave::SPEShuffler(void* p)
       }
       else
       {
+         Bucket b;
+         b.totalnum = *(int32_t*)(msg.getData() + 8);;
+         b.totalsize = *(int32_t*)(msg.getData() + 12);
+         b.src_ip = speip;
+         b.src_dataport = *(int32_t*)msg.getData();
+         b.session = *(int32_t*)(msg.getData() + 4);
+
          gmp->sendto(speip, speport, msgid, &msg);
 
-         if (!self->m_DataChn.isConnected(speip, dataport))
-            self->m_DataChn.connect(speip, dataport);
-
-         Bucket b;
-         b.totalnum = totalnum;
-         b.totalsize = totalsize;
-         b.src_ip = speip;
-         b.src_dataport = dataport;
-         b.session = session;
+         if (!self->m_DataChn.isConnected(speip, b.src_dataport))
+            self->m_DataChn.connect(speip, b.src_dataport);
 
          pthread_mutex_lock(bqlock);
          bq->push(b);

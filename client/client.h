@@ -83,36 +83,37 @@ protected:
    static int updateMasters();
 
 protected:
-   static std::string g_strServerHost;
-   static std::string g_strServerIP;
-   static int g_iServerPort;
-   static CGMP g_GMP;
-   static DataChn g_DataChn;
-   static int32_t g_iKey;
+   static std::string g_strServerHost;		// original master server domain name
+   static std::string g_strServerIP;		// original master server IP address
+   static int g_iServerPort;			// original master server port
+   static CGMP g_GMP;				// GMP
+   static DataChn g_DataChn;			// data channel
+   static int32_t g_iKey;			// user key
 
-   // this is the global key/iv for this client. do not use this for any connection; a new connection should duplicate this
+   // this is the global key/iv for this client. do not share this for all connections; a new connection should duplicate this
    static unsigned char g_pcCryptoKey[16];
    static unsigned char g_pcCryptoIV[8];
 
-   static Topology g_Topology;
+   static Topology g_Topology;			// slave system topology
 
-   static SectorError g_ErrorInfo;
+   static SectorError g_ErrorInfo;		// error description
 
-   static StatCache g_StatCache;
+   static StatCache g_StatCache;		// cache for stat() call, used for updating file that is not reflected in the master system
 
 private:
-   static int g_iCount;
+   static int g_iCount;				// number of concurrent logins
 
 protected: // master routing
-   static Routing g_Routing;
+   static Routing g_Routing;			// master routing module
 
 protected:
-   static std::string g_strUsername;
-   static std::string g_strPassword;
-   static std::string g_strCert;
+   static std::string g_strUsername;		// user account name
+   static std::string g_strPassword;		// user password
+   static std::string g_strCert;		// master certificate
 
-   static std::set<Address, AddrComp> g_sMasters;
+   static std::set<Address, AddrComp> g_sMasters;	// masters
 
+protected: // the following are used for keeping alive with the masters
    static bool g_bActive;
    static pthread_t g_KeepAlive;
    static pthread_cond_t g_KACond;

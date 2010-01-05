@@ -57,8 +57,8 @@ public:
    void setOutputLoc(const unsigned int& bucket, const Address& addr);
 
 public:
-   std::string m_strPath;
-   std::string m_strName;
+   std::string m_strPath;		// path for output files
+   std::string m_strName;		// name prefix for output files
 
    std::vector<std::string> m_vFiles;	// list of files
    std::vector<int64_t> m_vSize;	// size per file
@@ -66,13 +66,13 @@ public:
 
    std::vector< std::set<Address, AddrComp> > m_vLocation;            // locations for each file
 
-   int m_iFileNum;		// number of files
-   int64_t m_llSize;		// total data size
-   int64_t m_llRecNum;		// total number of records
-   int64_t m_llStart;		// start point (record)
-   int64_t m_llEnd;		// end point (record), -1 means the last record
+   int m_iFileNum;			// number of files
+   int64_t m_llSize;			// total data size
+   int64_t m_llRecNum;			// total number of records
+   int64_t m_llStart;			// start point (record)
+   int64_t m_llEnd;			// end point (record), -1 means the last record
 
-   int m_iStatus;		// 0: uninitialized, 1: initialized, -1: bad
+   int m_iStatus;			// 0: uninitialized, 1: initialized, -1: bad
 };
 
 class SphereResult
@@ -125,17 +125,17 @@ public:
    inline void setDataMoveAttr(bool move) {m_bDataMove = move;}
 
 private:
-   int m_iProcType;			// 0: sphere 1: mapreduce
+   int m_iProcType;				// 0: sphere 1: mapreduce
 
-   std::string m_strOperator;
-   char* m_pcParam;
-   int m_iParamSize;
-   SphereStream* m_pInput;
-   SphereStream* m_pOutput;
-   int m_iRows;
-   int m_iOutputType;
-   char* m_pOutputLoc;
-   int m_iSPENum;
+   std::string m_strOperator;			// name of the UDF
+   char* m_pcParam;				// parameter
+   int m_iParamSize;				// size of the parameter
+   SphereStream* m_pInput;			// input stream
+   SphereStream* m_pOutput;			// output stream
+   int m_iRows;					// number of rows per UDF processing
+   int m_iOutputType;				// type of output: -1, loca; 0, none; N, buckets 
+   char* m_pOutputLoc;				// output location for buckets
+   int m_iSPENum;				// number of SPEs
 
    struct DS
    {
@@ -155,53 +155,53 @@ private:
 
    struct SPE
    {
-      int32_t m_iID;
-      std::string m_strIP;		// SPE IP
-      int m_iPort;			// SPE GMP port
-      int m_iDataPort;			// SPE data port
-      DS* m_pDS;
-      int m_iStatus;			// -1: abandond; 0: uninitialized; 1: ready; 2; running
-      int m_iProgress;			// 0 - 100 (%)
-      timeval m_StartTime;
-      timeval m_LastUpdateTime;
-      int m_iSession;			// SPE session ID
+      int32_t m_iID;				// SPE ID
+      std::string m_strIP;			// SPE IP
+      int m_iPort;				// SPE GMP port
+      int m_iDataPort;				// SPE data port
+      DS* m_pDS;				// current processing DS
+      int m_iStatus;				// -1: abandond; 0: uninitialized; 1: ready; 2; running
+      int m_iProgress;				// 0 - 100 (%)
+      timeval m_StartTime;			// SPE start time
+      timeval m_LastUpdateTime;			// SPE last update time
+      int m_iSession;				// SPE session ID for data channel
    };
    std::map<int, SPE> m_mSPE;
 
    struct BUCKET
    {
-      int32_t m_iID;
-      std::string m_strIP;		// slave IP address
-      int m_iPort;			// slave GMP port
-      int m_iDataPort;			// slave Data port
-      int m_iShufflerPort;		// Shuffer GMP port
-      int m_iSession;			// Shuffler session ID
-      int m_iProgress;
-      timeval m_LastUpdateTime;
+      int32_t m_iID;				// bucket ID
+      std::string m_strIP;			// slave IP address
+      int m_iPort;				// slave GMP port
+      int m_iDataPort;				// slave Data port
+      int m_iShufflerPort;			// Shuffer GMP port
+      int m_iSession;				// Shuffler session ID
+      int m_iProgress;				// bucket progress, 0 or 100 
+      timeval m_LastUpdateTime;			// last update time
    };
-   std::map<int, BUCKET> m_mBucket;
+   std::map<int, BUCKET> m_mBucket;		// list of all buckets
 
-   int m_iProgress;		// progress, 0..100
-   double m_dRunningProgress;
-   int m_iAvgRunTime;		// average running time, in seconds
-   int m_iTotalDS;		// total number of data segments
-   int m_iTotalSPE;		// total number of SPEs
-   int m_iAvailRes;
-   bool m_bBucketHealth;	// if all bucket nodes are alive; unable to recover from bucket failure
+   int m_iProgress;				// progress, 0..100
+   double m_dRunningProgress;			// progress of running but incomplete jobs
+   int m_iAvgRunTime;				// average running time, in seconds
+   int m_iTotalDS;				// total number of data segments
+   int m_iTotalSPE;				// total number of SPEs
+   int m_iAvailRes;				// number of availale result to be read
+   bool m_bBucketHealth;			// if all bucket nodes are alive; unable to recover from bucket failure
 
    pthread_mutex_t m_ResLock;
    pthread_cond_t m_ResCond;
 
-   int m_iMinUnitSize;		// minimum data segment size
-   int m_iMaxUnitSize;		// maximum data segment size, must be smaller than physical memory
-   int m_iCore;			// number of processing instances on each node
-   bool m_bDataMove;		// if source data is allowed to move for Sphere process
+   int m_iMinUnitSize;				// minimum data segment size
+   int m_iMaxUnitSize;				// maximum data segment size, must be smaller than physical memory
+   int m_iCore;					// number of processing instances on each node
+   bool m_bDataMove;				// if source data is allowed to move for Sphere process
 
    struct OP
    {
-      std::string m_strLibrary;
-      std::string m_strLibPath;
-      int m_iSize;
+      std::string m_strLibrary;			// UDF name
+      std::string m_strLibPath;			// path of the dynamic library that contains the UDF
+      int m_iSize;				// size of the library
    };
    std::vector<OP> m_vOP;
    int loadOperator(SPE& s);

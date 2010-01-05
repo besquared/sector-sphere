@@ -74,14 +74,14 @@ private:
    void updateclusterio_(Cluster& c, std::map<std::string, int64_t>& data_in, std::map<std::string, int64_t>& data_out, int64_t& total);
 
 public:
-   std::map<Address, int, AddrComp> m_mAddrList;
-   std::map<int, SlaveNode> m_mSlaveList;
+   std::map<Address, int, AddrComp> m_mAddrList;		// list of slave addresses
+   std::map<int, SlaveNode> m_mSlaveList;			// list of slaves
 
-   Topology m_Topology;
-   Cluster m_Cluster;
+   Topology m_Topology;						// slave system topology definition
+   Cluster m_Cluster;						// topology structure
 
 private:
-   std::map<std::string, std::set<std::string> > m_mIPFSInfo;
+   std::map<std::string, std::set<std::string> > m_mIPFSInfo;	// storage path on each slave node; used to avoid conflict
 
 private:
    pthread_mutex_t m_SlaveLock;

@@ -47,10 +47,10 @@ written by
 
 struct StatRec
 {
-   int m_iCount;
-   int m_bChange;
-   int64_t m_llTimeStamp;
-   int64_t m_llSize;
+   int m_iCount;		// number of reference
+   int m_bChange;		// if the file has been changed
+   int64_t m_llTimeStamp;	// time stamp
+   int64_t m_llSize;		// file size
 };
 
 class StatCache

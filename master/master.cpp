@@ -586,7 +586,6 @@ void* Master::service(void* s)
       ServiceJobParam* p = new ServiceJobParam;
       p->ip = ip;
       p->port = port;
-      p->self = self;
       p->ssl = s;
 
       self->m_ServiceJobQueue.push(p);
@@ -612,6 +611,7 @@ void* Master::serviceEx(void* p)
       SSLTransport* s = p->ssl;
       string ip = p->ip;
       //int port = p->port;
+      delete p;
 
       int32_t cmd;
       if (s->recv((char*)&cmd, 4) < 0)

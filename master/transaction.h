@@ -51,7 +51,7 @@ struct Transaction
 {
    int m_iTransID;		// unique id
    int m_iType;			// 0: file, 1: sphere
-   int64_t m_llStartTime;
+   int64_t m_llStartTime;	// start time
    std::string m_strFile;	// if type = 0, this is the file being accessed
    int m_iMode;			// if type = 0, this is the file access mode
    std::set<int> m_siSlaveID;	// set of slave id involved in this transaction
@@ -77,8 +77,8 @@ public:
    unsigned int getTotalTrans();
 
 public:
-   std::map<int, Transaction> m_mTransList;
-   int m_iTransID;
+   std::map<int, Transaction> m_mTransList;	// list of active transactions
+   int m_iTransID;				// seed of transaction id
 };
 
 #endif

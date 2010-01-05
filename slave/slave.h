@@ -70,16 +70,16 @@ public:
    void clear();
 
 public:
-   int m_iBucketNum;
+   int m_iBucketNum;				// number of buckets
 
-   std::vector<int32_t> m_vIndexLen;
-   std::vector<int64_t*> m_vIndex;
-   std::vector<int32_t> m_vIndexPhyLen;
-   std::vector<int32_t> m_vDataLen;
-   std::vector<char*> m_vData;
-   std::vector<int32_t> m_vDataPhyLen;
+   std::vector<int32_t> m_vIndexLen;		// length of index data for each bucket
+   std::vector<int64_t*> m_vIndex;		// index for each bucket
+   std::vector<int32_t> m_vIndexPhyLen;		// physical length for each bucket index buffer
+   std::vector<int32_t> m_vDataLen;		// data size of each bucket
+   std::vector<char*> m_vData;			// bucket data
+   std::vector<int32_t> m_vDataPhyLen;		// physical buffer length for each bucket data
 
-   int64_t m_llTotalDataSize;
+   int64_t m_llTotalDataSize;			// total data size for all buckets
 };
 
 class SPEDestination
@@ -191,13 +191,13 @@ private:
 
    struct Param3
    {
-      Slave* serv_instance;
+      Slave* serv_instance;	// self
       std::string master_ip;
       int master_port;
-      int transid;
-      std::string src;
-      std::string dst;
-      time_t timestamp;
+      int transid;		// transaction id
+      std::string src;		// source file
+      std::string dst;		// destination file
+      time_t timestamp;		// timestamp of the source file
    };
 
    struct Param4
@@ -224,11 +224,11 @@ private:
 
    struct Bucket
    {
-      int totalnum;
-      int totalsize;
-      std::string src_ip;
-      int src_dataport;
-      int session;
+      int totalnum;		// total number of records
+      int totalsize;		// total data size
+      std::string src_ip;	// source IP address
+      int src_dataport;		// source data port
+      int session;		// DataChn session ID
    };
 
    struct Param5
@@ -253,10 +253,10 @@ private:
       char* param;              // Reduce parameter
       int psize;                // parameter size
 
-      std::queue<Bucket>* bq;
+      std::queue<Bucket>* bq;	// job queue for bucket data delivery
       pthread_mutex_t* bqlock;
       pthread_cond_t* bqcond;
-      int64_t* pending;
+      int64_t* pending;		// pending incoming data size
    };
 
    static void* fileHandler(void* p2);
@@ -323,10 +323,9 @@ private:
    SlaveStat m_SlaveStat;		// slave statistics
    SectorLog m_SectorLog;		// slave log
 
-   MOMgmt m_InMemoryObjects;			// in-memory objects
+   MOMgmt m_InMemoryObjects;		// in-memory objects
 
-private:
-   Routing m_Routing;
+   Routing m_Routing;			// master routing module
 };
 
 #endif

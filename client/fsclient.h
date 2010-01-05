@@ -64,25 +64,25 @@ public:
    bool eof();
 
 private:
-   int32_t m_iSession;
-   std::string m_strSlaveIP;
-   int32_t m_iSlaveDataPort;
+   int32_t m_iSession;		// session ID for data channel
+   std::string m_strSlaveIP;	// slave IP address
+   int32_t m_iSlaveDataPort;	// slave port number
 
    unsigned char m_pcKey[16];
    unsigned char m_pcIV[8];
 
-   std::string m_strFileName;
+   std::string m_strFileName;	// Sector file name
 
-   int64_t m_llSize;
-   int64_t m_llCurReadPos;
-   int64_t m_llCurWritePos;
+   int64_t m_llSize;		// file size
+   int64_t m_llCurReadPos;	// current read position
+   int64_t m_llCurWritePos;	// current write position
 
-   bool m_bRead;
-   bool m_bWrite;
-   bool m_bSecure;
+   bool m_bRead;		// read permission
+   bool m_bWrite;		// write permission
+   bool m_bSecure;		// if the data transfer should be secure
 
-   bool m_bLocal;
-   char* m_pcLocalPath;
+   bool m_bLocal;		// if this file exist on the same node, i.e., local file
+   char* m_pcLocalPath;		// path of the file if it is local
 
 private:
    pthread_mutex_t m_FileLock;

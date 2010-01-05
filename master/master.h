@@ -61,8 +61,8 @@ written by
 
 struct SlaveAddr
 {
-   std::string m_strAddr;
-   std::string m_strBase;
+   std::string m_strAddr;				// master IP address
+   std::string m_strBase;				// slave executable "start_slave" path
 };
 
 class Master
@@ -84,7 +84,6 @@ private:
    {
       std::string ip;
       int port;
-      Master* self;
       SSLTransport* ssl;
    };
 
