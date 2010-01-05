@@ -56,6 +56,7 @@ written by
 #include <slavemgmt.h>
 #include <transaction.h>
 #include <user.h>
+#include <threadpool.h>
 
 
 struct SlaveAddr
@@ -77,19 +78,22 @@ public:
    int stop();
 
 private:
-   static void* service(void* s);
-   struct Param
+   ThreadJobQueue m_ServiceJobQueue;			// job queue for service thread pool
+
+   struct ServiceJobParam
    {
       std::string ip;
       int port;
       Master* self;
       SSLTransport* ssl;
    };
+
+   static void* service(void* s);
    static void* serviceEx(void* p);
 
-   int processSlaveJoin(SSLTransport& s, const std::string& ip);
-   int processUserJoin(SSLTransport& s, const std::string& ip);
-   int processMasterJoin(SSLTransport& s, const std::string& ip);
+   int processSlaveJoin(SSLTransport& s, SSLTransport& secconn, const std::string& ip);
+   int processUserJoin(SSLTransport& s, SSLTransport& secconn, const std::string& ip);
+   int processMasterJoin(SSLTransport& s, SSLTransport& secconn, const std::string& ip);
 
    static void* process(void* s);
 
@@ -137,8 +141,6 @@ private:
 
    Routing m_Routing;					// master routing module
    uint32_t m_iRouterKey;				// identification for this master
-
-   SSLTransport m_SecSrvConn;				// connection to the security server
 
 private:
    std::map<std::string, SlaveAddr> m_mSlaveAddrRec;	// slave and its executale path

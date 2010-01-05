@@ -38,30 +38,53 @@ written by
    Yunhong Gu, last updated 01/04/2010
 *****************************************************************************/
 
+#include "threadpool.h"
 
-#ifndef __SECTOR_THREAD_POOL_H__
-#define __SECTOR_THREAD_POOL_H__
+using namespace std;
 
-#include <pthread.h>
-#include <queue>
-
-class ThreadJobQueue
+ThreadJobQueue::ThreadJobQueue()
 {
-public:
-   ThreadJobQueue();
-   ~ThreadJobQueue();
+   pthread_mutex_init(&m_QueueLock, NULL);
+   pthread_cond_init(&m_QueueCond, NULL);
+}
 
-public:
-   int push(void* param);
-   void* pop();
+ThreadJobQueue::~ThreadJobQueue()
+{
+   pthread_mutex_destroy(&m_QueueLock);
+   pthread_cond_destroy(&m_QueueCond);
+}
 
-   int release(int num);
+int ThreadJobQueue::push(void* param)
+{
+   pthread_mutex_lock(&m_QueueLock);
 
-private:
-   std::queue<void*> m_qJobs;
+   m_qJobs.push(param);
 
-   pthread_mutex_t m_QueueLock;
-   pthread_cond_t m_QueueCond;
-};
+   pthread_cond_signal(&m_QueueCond);
+   pthread_mutex_unlock(&m_QueueLock);
 
-#endif
+   return 0;
+}
+
+void* ThreadJobQueue::pop()
+{
+   pthread_mutex_lock(&m_QueueLock);
+
+   while (m_qJobs.empty())
+      pthread_cond_wait(&m_QueueCond, &m_QueueLock);
+
+   void* param = m_qJobs.front();
+   m_qJobs.pop();
+
+   pthread_mutex_unlock(&m_QueueLock);
+
+   return param;
+}
+
+int ThreadJobQueue::release(int num)
+{
+   for (int i = 0; i < num; ++ i)
+      push(NULL);
+
+   return 0;
+}

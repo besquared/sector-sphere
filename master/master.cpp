@@ -551,14 +551,20 @@ int Master::stop()
 {
    m_Status = STOPPED;
 
-   m_SecSrvConn.close();
-
    return 0;
 }
 
 void* Master::service(void* s)
 {
    Master* self = (Master*)s;
+
+   const int ServiceWorker = 4;
+   for (int i = 0; i < ServiceWorker; ++ i)
+   {
+      pthread_t t;
+      pthread_create(&t, NULL, serviceEx, self);
+      pthread_detach(t);
+   }
 
    SSLTransport serv;
    if (serv.initServerCTX("../conf/master_node.cert", "../conf/master_node.key") < 0)
@@ -577,15 +583,13 @@ void* Master::service(void* s)
       if (NULL == s)
          continue;
 
-      Param* p = new Param;
+      ServiceJobParam* p = new ServiceJobParam;
       p->ip = ip;
       p->port = port;
       p->self = self;
       p->ssl = s;
 
-      pthread_t t;
-      pthread_create(&t, NULL, serviceEx, p);
-      pthread_detach(t);
+      self->m_ServiceJobQueue.push(p);
    }
 
    return NULL;
@@ -595,58 +599,72 @@ void* Master::serviceEx(void* p)
 {
    signal(SIGPIPE, SIG_IGN);
 
-   Master* self = ((Param*)p)->self;
-   SSLTransport* s = ((Param*)p)->ssl;
-   string ip = ((Param*)p)->ip;
-   //int port = ((Param*)p)->port;
+   Master* self = (Master*)p;
 
-   int32_t cmd;
-   if (s->recv((char*)&cmd, 4) < 0)
-      goto EXIT;
+   SSLTransport secconn;
 
-   if (self->m_SecSrvConn.send((char*)&cmd, 4) < 0)
+   while (true)
    {
-      //if the permanent connection to the security server is broken, re-connect
+      ServiceJobParam* p = (ServiceJobParam*)self->m_ServiceJobQueue.pop();
+      if (NULL == p)
+         break;
 
-      self->m_SecSrvConn.close();
-      if (self->m_SecSrvConn.initClientCTX("../conf/security_node.cert") < 0)
+      SSLTransport* s = p->ssl;
+      string ip = p->ip;
+      //int port = p->port;
+
+      int32_t cmd;
+      if (s->recv((char*)&cmd, 4) < 0)
       {
-         self->m_SectorLog.insert("No security node certificate found. All slave/client connection will be rejected.");
-         return NULL;
-      }
-      self->m_SecSrvConn.open(NULL, 0);
-      if (self->m_SecSrvConn.connect(self->m_SysConfig.m_strSecServIP.c_str(), self->m_SysConfig.m_iSecServPort) < 0)
-      {
-         cmd = SectorError::E_NOSECSERV;
-         s->send((char*)&cmd, 4);
-         goto EXIT;
+         s->close();
+         continue;
       }
 
-      self->m_SecSrvConn.send((char*)&cmd, 4);
+      if (secconn.send((char*)&cmd, 4) < 0)
+      {
+         //if the permanent connection to the security server is broken, re-connect
+
+         secconn.close();
+         if (secconn.initClientCTX("../conf/security_node.cert") < 0)
+         {
+            self->m_SectorLog.insert("No security node certificate found. All slave/client connection will be rejected.");
+            s->close();
+            continue;
+         }
+         secconn.open(NULL, 0);
+         if (secconn.connect(self->m_SysConfig.m_strSecServIP.c_str(), self->m_SysConfig.m_iSecServPort) < 0)
+         {
+            cmd = SectorError::E_NOSECSERV;
+            s->send((char*)&cmd, 4);
+            s->close();
+            continue;
+         }
+
+         secconn.send((char*)&cmd, 4);
+      }
+
+      switch (cmd)
+      {
+      case 1: // slave node join
+         self->processSlaveJoin(*s, secconn, ip);
+         break;
+
+      case 2: // user login
+         self->processUserJoin(*s, secconn, ip);
+         break;
+
+      case 3: // master join
+         self->processMasterJoin(*s, secconn, ip);
+        break;
+      }
+
+      s->close();
    }
-
-   switch (cmd)
-   {
-   case 1: // slave node join
-      self->processSlaveJoin(*s, ip);
-      break;
-
-   case 2: // user login
-      self->processUserJoin(*s, ip);
-      break;
-
-   case 3: // master join
-      self->processMasterJoin(*s, ip);
-      break;
-   }
-
-EXIT:
-   s->close();
 
    return NULL;
 }
 
-int Master::processSlaveJoin(SSLTransport& s, const string& ip)
+int Master::processSlaveJoin(SSLTransport& s, SSLTransport& secconn, const string& ip)
 {
    // recv local storage path, avoid same slave joining more than once
    int32_t size = 0;
@@ -661,8 +679,8 @@ int Master::processSlaveJoin(SSLTransport& s, const string& ip)
    int32_t res = -1;
    char slaveIP[64];
    strcpy(slaveIP, ip.c_str());
-   m_SecSrvConn.send(slaveIP, 64);
-   m_SecSrvConn.recv((char*)&res, 4);
+   secconn.send(slaveIP, 64);
+   secconn.recv((char*)&res, 4);
 
    if ((lspath == NULL) || m_SlaveManager.checkDuplicateSlave(ip, lspath))
       res = SectorError::E_REPSLAVE;
@@ -768,21 +786,21 @@ int Master::processSlaveJoin(SSLTransport& s, const string& ip)
    return 0;
 }
 
-int Master::processUserJoin(SSLTransport& s, const std::string& ip)
+int Master::processUserJoin(SSLTransport& s, SSLTransport& secconn, const std::string& ip)
 {
    char user[64];
    s.recv(user, 64);
    char password[128];
    s.recv(password, 128);
 
-   m_SecSrvConn.send(user, 64);
-   m_SecSrvConn.send(password, 128);
+   secconn.send(user, 64);
+   secconn.send(password, 128);
    char clientIP[64];
    strcpy(clientIP, ip.c_str());
-   m_SecSrvConn.send(clientIP, 64);
+   secconn.send(clientIP, 64);
 
    int32_t key = 0;
-   m_SecSrvConn.recv((char*)&key, 4);
+   secconn.recv((char*)&key, 4);
 
    int32_t ukey;
    s.recv((char*)&ukey, 4);
@@ -811,26 +829,26 @@ int Master::processUserJoin(SSLTransport& s, const std::string& ip)
       int32_t size = 0;
       char* buf = NULL;
 
-      m_SecSrvConn.recv((char*)&size, 4);
+      secconn.recv((char*)&size, 4);
       if (size > 0)
       {
          buf = new char[size];
-         m_SecSrvConn.recv(buf, size);
+         secconn.recv(buf, size);
          au.deserialize(au.m_vstrReadList, buf);
          delete [] buf;
       }
 
-      m_SecSrvConn.recv((char*)&size, 4);
+      secconn.recv((char*)&size, 4);
       if (size > 0)
       {
          buf = new char[size];
-         m_SecSrvConn.recv(buf, size);
+         secconn.recv(buf, size);
          au.deserialize(au.m_vstrWriteList, buf);
          delete [] buf;
       }
 
       int32_t exec;
-      m_SecSrvConn.recv((char*)&exec, 4);
+      secconn.recv((char*)&exec, 4);
       au.m_bExec = exec;
 
       m_mActiveUser[au.m_iKey] = au;
@@ -871,13 +889,13 @@ int Master::processUserJoin(SSLTransport& s, const std::string& ip)
    return 0;
 }
 
-int Master::processMasterJoin(SSLTransport& s, const std::string& ip)
+int Master::processMasterJoin(SSLTransport& s, SSLTransport& secconn, const std::string& ip)
 {
    char masterIP[64];
    strcpy(masterIP, ip.c_str());
-   m_SecSrvConn.send(masterIP, 64);
+   secconn.send(masterIP, 64);
    int32_t res = -1;
-   m_SecSrvConn.recv((char*)&res, 4);
+   secconn.recv((char*)&res, 4);
 
    s.send((char*)&res, 4);
 
