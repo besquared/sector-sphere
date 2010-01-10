@@ -25,6 +25,7 @@ int main()
       if (++ count == 64)
       {
          // wait a while to avoid too many incoming slaves crashing the master
+         // TODO: check number of active slaves so far
          sleep(1);
          count = 0;
       }

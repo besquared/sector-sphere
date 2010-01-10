@@ -66,7 +66,7 @@ int main(int argc, char** argv)
    {
       SphereResult* res;
 
-      if (myproc.read(res) < 0)
+      if (myproc.read(res) <= 0)
       {
          if (myproc.checkMapProgress() < 0)
          {

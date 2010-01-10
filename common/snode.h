@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright (c) 2005 - 2009, The Board of Trustees of the University of Illinois.
+Copyright (c) 2005 - 2010, The Board of Trustees of the University of Illinois.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 10/16/2009
+   Yunhong Gu, last updated 01/08/2010
 *****************************************************************************/
 
 
@@ -50,6 +50,10 @@ written by
 
 class SNode
 {
+public:
+   SNode();
+   ~SNode();
+
 public:
    std::string m_strName;
    bool m_bIsDir;

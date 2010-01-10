@@ -188,6 +188,7 @@ void* SServer::process(void* p)
 
    SServer* self = ((Param*)p)->sserver;
    SSLTransport* s = ((Param*)p)->ssl;
+   delete (Param*)p;
 
    while (true)
    {
@@ -288,6 +289,5 @@ void* SServer::process(void* p)
 EXIT:
    s->close();
    delete s;
-   delete (Param*)p;
    return NULL;
 }

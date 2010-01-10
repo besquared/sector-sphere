@@ -548,6 +548,7 @@ void* SphereProcess::run(void* param)
       self->g_GMP.sendto(i->second.m_strIP.c_str(), i->second.m_iShufflerPort, id, &msg);
    }
 
+   //TODO: need to detect lost slaves
    while (self->checkBucket() > 0)
    {
       char ip[64];

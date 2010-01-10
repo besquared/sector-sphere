@@ -183,6 +183,9 @@ SSLTransport* SSLTransport::accept(char* ip, int& port)
 
 int SSLTransport::connect(const char* host, const int& port)
 {
+   if (m_bConnected)
+      return 0;
+
    sockaddr_in addr;
    addr.sin_family = AF_INET;
    addr.sin_port = htons(port);
@@ -232,6 +235,9 @@ int SSLTransport::connect(const char* host, const int& port)
 
 int SSLTransport::close()
 {
+   if (!m_bConnected)
+      return 0;
+
    m_bConnected = false;
    return ::close(m_iSocket);
 }

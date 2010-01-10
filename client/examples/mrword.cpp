@@ -58,7 +58,7 @@ int main(int argc, char** argv)
 
       if (myproc.read(res) < 0)
       {
-         if (myproc.checkMapProgress() < 0)
+         if (myproc.checkMapProgress() <= 0)
          {
             cerr << "all SPEs failed\n";
             break;

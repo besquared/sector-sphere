@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright (c) 2005 - 2009, The Board of Trustees of the University of Illinois.
+Copyright (c) 2005 - 2010, The Board of Trustees of the University of Illinois.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 12/11/2009
+   Yunhong Gu, last updated 01/07/2010
 *****************************************************************************/
 
 
@@ -1063,15 +1063,15 @@ int Index::collectDataInfo(const string& path, map<string, SNode>& currdir, vect
 
          string idx = i->first + ".idx";
          int rows = -1;
-         map<string, SNode>::iterator i = currdir.find(idx);
-         if (i != currdir.end())
-            rows = i->second.m_llSize / 8 - 1;
+         map<string, SNode>::iterator j = currdir.find(idx);
+         if (j != currdir.end())
+            rows = j->second.m_llSize / 8 - 1;
 
          char buf[1024];
          sprintf(buf, "%s %lld %d", (path + "/" + i->first).c_str(), i->second.m_llSize, rows);
 
-         for (set<Address, AddrComp>::iterator j = i->second.m_sLocation.begin(); j != i->second.m_sLocation.end(); ++ j)
-            sprintf(buf + strlen(buf), " %s %d", j->m_strIP.c_str(), j->m_iPort);
+         for (set<Address, AddrComp>::iterator k = i->second.m_sLocation.begin(); k != i->second.m_sLocation.end(); ++ k)
+            sprintf(buf + strlen(buf), " %s %d", k->m_strIP.c_str(), k->m_iPort);
 
          result.push_back(buf);
       }

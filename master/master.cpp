@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 01/03/2010
+   Yunhong Gu, last updated 01/08/2010
 *****************************************************************************/
 
 #include <common.h>
@@ -356,7 +356,7 @@ int Master::run()
          SectorMsg msg;
          msg.setType(1);
 
-         if (m_GMP.rpc(i->second.m_strIP.c_str(), i->second.m_iPort, &msg, &msg) > 0)
+         if (m_GMP.rpc(i->second.m_strIP.c_str(), i->second.m_iPort, &msg, &msg) >= 0)
          {
             i->second.m_llLastUpdateTime = CTimer::getTime();
             i->second.deserialize(msg.getData(), msg.m_iDataLength);
@@ -594,13 +594,18 @@ void* Master::service(void* s)
    return NULL;
 }
 
-void* Master::serviceEx(void* p)
+void* Master::serviceEx(void* param)
 {
    signal(SIGPIPE, SIG_IGN);
 
-   Master* self = (Master*)p;
+   Master* self = (Master*)param;
 
    SSLTransport secconn;
+   if (secconn.initClientCTX("../conf/security_node.cert") < 0)
+   {
+      self->m_SectorLog.insert("No security node certificate found. All slave/client connection will be rejected.");
+      return NULL;
+   }
 
    while (true)
    {
@@ -623,19 +628,10 @@ void* Master::serviceEx(void* p)
       if (secconn.send((char*)&cmd, 4) < 0)
       {
          //if the permanent connection to the security server is broken, re-connect
-
-         secconn.close();
-         if (secconn.initClientCTX("../conf/security_node.cert") < 0)
-         {
-            self->m_SectorLog.insert("No security node certificate found. All slave/client connection will be rejected.");
-            s->close();
-            continue;
-         }
          secconn.open(NULL, 0);
          if (secconn.connect(self->m_SysConfig.m_strSecServIP.c_str(), self->m_SysConfig.m_iSecServPort) < 0)
          {
             cmd = SectorError::E_NOSECSERV;
-            s->send((char*)&cmd, 4);
             s->close();
             continue;
          }
@@ -660,6 +656,8 @@ void* Master::serviceEx(void* p)
 
       s->close();
    }
+
+   secconn.close();
 
    return NULL;
 }
@@ -752,8 +750,6 @@ int Master::processSlaveJoin(SSLTransport& s, SSLTransport& secconn, const strin
             string cmd = string("rm -rf ") + m_strHomeDir + ".tmp/" + ip + ".left";
             system(cmd.c_str());
          }
-         branch->clear();
-         delete branch;
 
          // send the list of masters to the new slave
          s.send((char*)&m_iRouterKey, 4);
@@ -771,6 +767,9 @@ int Master::processSlaveJoin(SSLTransport& s, SSLTransport& secconn, const strin
             s.send((char*)&i->second.m_iPort, 4);
          }
       }
+
+      branch->clear();
+      delete branch;
 
       char text[64];
       sprintf(text, "Slave node %s:%d joined.", ip.c_str(), sn.m_iPort);
@@ -2221,11 +2220,26 @@ void* Master::replica(void* s)
          if (self->m_TransManager.getTotalTrans() + self->m_sstrOnReplicate.size() >= self->m_SlaveManager.getTotalSlaves())
             break;
 
-         // avoid replicate a file that is currently being replicated
-         if (self->m_sstrOnReplicate.find(*r) == self->m_sstrOnReplicate.end())
+         int pos = r->find('\t');
+         string src = r->substr(0, pos);
+         string dst = r->substr(pos + 1, r->length());
+
+         if (src != dst)
          {
-            int pos = r->find('\t');
-            self->createReplica(r->substr(0, pos), r->substr(pos + 1, r->length()));
+            self->createReplica(src, dst);
+         }
+         else
+         {
+            // avoid replicate a file that is currently being replicated
+            if (self->m_sstrOnReplicate.find(src) == self->m_sstrOnReplicate.end())
+               continue;
+
+            SNode sn;
+            self->m_pMetadata->lookup(src, sn);
+            if (sn.m_sLocation.size() > self->m_SysConfig.m_iReplicaNum)
+               continue;
+
+            self->createReplica(src, dst);
          }
       }
 

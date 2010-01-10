@@ -577,7 +577,7 @@ int Client::updateMasters()
    {
       msg.setType(5);
 
-      if (g_GMP.rpc(i->second.m_strIP.c_str(), i->second.m_iPort, &msg, &msg) > 0)
+      if (g_GMP.rpc(i->second.m_strIP.c_str(), i->second.m_iPort, &msg, &msg) >= 0)
       {
          Address addr;
          addr.m_strIP = i->second.m_strIP;
