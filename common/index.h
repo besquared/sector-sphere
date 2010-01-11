@@ -67,10 +67,6 @@ public:
    virtual int utime(const std::string& path, const int64_t& ts);
 
 public:
-   virtual int lock(const std::string& path, int user, int mode);
-   virtual int unlock(const std::string& path, int user, int mode);
-
-public:
    virtual int serialize(const std::string& path, const std::string& dstfile);
    virtual int deserialize(const std::string& path, const std::string& srcfile,  const Address* addr = NULL);
    virtual int scan(const std::string& data_dir, const std::string& meta_dir);
@@ -97,7 +93,6 @@ private:
 
 private:
    std::map<std::string, SNode> m_mDirectory;
-   pthread_mutex_t m_MetaLock;
 };
 
 #endif

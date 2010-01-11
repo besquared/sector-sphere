@@ -93,8 +93,8 @@ public:	// update operations
    virtual int utime(const std::string& path, const int64_t& ts) = 0;
 
 public:	// lock/unlock
-   virtual int lock(const std::string& path, int user, int mode) = 0;
-   virtual int unlock(const std::string& path, int user, int mode) = 0;
+   virtual int lock(const std::string& path, int user, int mode);
+   virtual int unlock(const std::string& path, int user, int mode);
 
 public:	// serialization
    virtual int serialize(const std::string& path, const std::string& dstfile) = 0;
@@ -123,6 +123,16 @@ public:	// medadata and file system operations
 public:
    static int parsePath(const std::string& path, std::vector<std::string>& result);
    static std::string revisePath(const std::string& path);
+
+protected:
+   pthread_mutex_t m_MetaLock;
+
+   struct LockSet
+   {
+      std::set<int> m_sReadLock;
+      std::set<int> m_sWriteLock;
+   };
+   std::map<std::string, LockSet> m_mLock;
 };
 
 #endif

@@ -372,49 +372,6 @@ int Index2::utime(const string& path, const int64_t& ts)
    return 0;
 }
 
-int Index2::lock(const string& path, int user, int mode)
-{
-   if (mode == 1)
-   {
-      m_mLock[path].m_sReadLock.insert(user);
-   }
-   else if (mode == 2)
-   {
-      if (!m_mLock[path].m_sWriteLock.empty())
-         return -1;
-
-      m_mLock[path].m_sWriteLock.insert(user);
-   }
-   else
-      return -1;
-
-   return 0;
-}
-
-int Index2::unlock(const string& path, int user, int mode)
-{
-   map<string, LockSet>::iterator i = m_mLock.find(path);
-
-   if (i == m_mLock.end())
-      return -1;
-
-   if (mode == 1)
-   {
-      i->second.m_sReadLock.erase(user);;
-   }
-   else if (mode == 2)
-   {
-      i->second.m_sWriteLock.erase(user);
-   }
-   else
-      return -1;
-
-   if (i->second.m_sReadLock.empty() && i->second.m_sWriteLock.empty())
-      m_mLock.erase(i);
-
-   return 0;
-}
-
 int Index2::serialize(const string& path, const string& dstfile)
 {
    ofstream ofs(dstfile.c_str());

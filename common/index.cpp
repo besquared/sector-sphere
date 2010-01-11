@@ -56,12 +56,10 @@ using namespace std;
 
 Index::Index()
 {
-   pthread_mutex_init(&m_MetaLock, NULL);
 }
 
 Index::~Index()
 {
-   pthread_mutex_destroy(&m_MetaLock);
 }
 
 int Index::list(const string& path, vector<string>& filelist)
@@ -243,7 +241,6 @@ int Index::create(const string& path, bool isdir)
          n.m_bIsDir = true;
          n.m_llTimeStamp = 0;
          n.m_llSize = 0;
-         n.m_iReadLock = n.m_iWriteLock = 0;
          (*currdir)[*d] = n;
          s = currdir->find(*d);
 
@@ -305,7 +302,6 @@ int Index::move(const string& oldpath, const string& newpath, const string& newn
          n.m_bIsDir = true;
          n.m_llTimeStamp = 0;
          n.m_llSize = 0;
-         n.m_iReadLock = n.m_iWriteLock = 0;
          (*nd)[*d] = n;
          ns = nd->find(*d);
       }
@@ -402,7 +398,6 @@ int Index::update(const string& fileinfo, const Address& loc, const int& type)
          n.m_bIsDir = true;
          n.m_llTimeStamp = sn.m_llTimeStamp;
          n.m_llSize = 0;
-         n.m_iReadLock = n.m_iWriteLock = 0;
          (*currdir)[*d] = n;
          s = currdir->find(*d);;
       }
@@ -480,106 +475,6 @@ int Index::utime(const string& path, const int64_t& ts)
 
    s->second.m_llTimeStamp = ts;
    return 1;
-}
-
-int Index::lock(const string& path, int user, int mode)
-{
-   CGuard mg(m_MetaLock);
-
-   vector<string> dir;
-   parsePath(path, dir);
-
-   if (dir.empty())
-      return 0;
-
-   vector<map<string, SNode>::iterator> ptr;
-
-   map<string, SNode>* currdir = &m_mDirectory;
-   map<string, SNode>::iterator s;
-   for (vector<string>::iterator d = dir.begin(); d != dir.end(); ++ d)
-   {
-      s = currdir->find(*d);
-      if (s == currdir->end())
-         return -1;
-
-      ptr.insert(ptr.end(), s);
-
-      currdir = &(s->second.m_mDirectory);
-   }
-
-   // cannot lock a directory
-   if ((*(ptr.rbegin()))->second.m_bIsDir)
-      return -2;
-
-   // if already in write lock, return error
-   if ((*(ptr.rbegin()))->second.m_iWriteLock > 0)
-      return -3;
-
-   // write
-   if (mode & SF_MODE::WRITE)
-   {
-      // if already in read lock, return error
-      if ((*(ptr.rbegin()))->second.m_iReadLock > 0)
-         return -4;
-
-      for (vector<map<string, SNode>::iterator>::iterator i = ptr.begin(); i != ptr.end(); ++ i)
-         (*i)->second.m_iWriteLock ++;
-   }
-
-   // read
-   if (mode & SF_MODE::READ)
-   {
-      for (vector<map<string, SNode>::iterator>::iterator i = ptr.begin(); i != ptr.end(); ++ i)
-         (*i)->second.m_iReadLock ++;
-   }
-
-   return 0;
-}
-
-int Index::unlock(const string& path, int user, int mode)
-{
-   CGuard mg(m_MetaLock);
-
-   vector<string> dir;
-   parsePath(path, dir);
-
-   if (dir.empty())
-      return 0;
-
-   vector<map<string, SNode>::iterator> ptr;
-
-   map<string, SNode>* currdir = &m_mDirectory;
-   map<string, SNode>::iterator s;
-   for (vector<string>::iterator d = dir.begin(); d != dir.end(); ++ d)
-   {
-      s = currdir->find(*d);
-      if (s == currdir->end())
-         return -1;
-
-      ptr.insert(ptr.end(), s);
-
-      currdir = &(s->second.m_mDirectory);
-   }
-
-   // cannot lock a directory
-   if ((*(ptr.rbegin()))->second.m_bIsDir)
-      return -2;
-
-   // write
-   if (mode & SF_MODE::WRITE)
-   {
-      for (vector<map<string, SNode>::iterator>::iterator i = ptr.begin(); i != ptr.end(); ++ i)
-         (*i)->second.m_iWriteLock --;
-   }
-
-   // read
-   if (mode & SF_MODE::READ)
-   {
-      for (vector<map<string, SNode>::iterator>::iterator i = ptr.begin(); i != ptr.end(); ++ i)
-         (*i)->second.m_iReadLock --;
-   }
-
-   return 0;
 }
 
 int Index::serialize(const string& path, const string& dstfile)

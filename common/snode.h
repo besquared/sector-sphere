@@ -62,8 +62,6 @@ public:
    int64_t m_llTimeStamp;
    int64_t m_llSize;
    std::string m_strChecksum;
-   int m_iReadLock;
-   int m_iWriteLock;
 
 public:
    int serialize(char* buf);

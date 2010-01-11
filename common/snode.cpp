@@ -189,8 +189,6 @@ int SNode::deserialize(const char* buf)
       m_sLocation.insert(addr);
    }
 
-   m_iReadLock = m_iWriteLock = 0;
-
    return 0;
 }
 

@@ -38,6 +38,7 @@ written by
    Yunhong Gu, last updated 12/11/2009
 *****************************************************************************/
 
+#include <common.h>
 #include <string.h>
 #include <meta.h>
 
@@ -45,10 +46,59 @@ using namespace std;
 
 Metadata::Metadata()
 {
+   pthread_mutex_init(&m_MetaLock, NULL);
 }
 
 Metadata::~Metadata()
 {
+   pthread_mutex_destroy(&m_MetaLock);
+}
+
+int Metadata::lock(const string& path, int user, int mode)
+{
+   CGuard mg(m_MetaLock);
+
+   if (mode == 1)
+   {
+      m_mLock[path].m_sReadLock.insert(user);
+   }
+   else if (mode == 2)
+   {
+      if (!m_mLock[path].m_sWriteLock.empty())
+         return -1;
+
+      m_mLock[path].m_sWriteLock.insert(user);
+   }
+   else
+      return -1;
+
+   return 0;
+}
+
+int Metadata::unlock(const string& path, int user, int mode)
+{
+   CGuard mg(m_MetaLock);
+
+   map<string, LockSet>::iterator i = m_mLock.find(path);
+
+   if (i == m_mLock.end())
+      return -1;
+
+   if (mode == 1)
+   {
+      i->second.m_sReadLock.erase(user);;
+   }
+   else if (mode == 2)
+   {
+      i->second.m_sWriteLock.erase(user);
+   }
+   else
+      return -1;
+
+   if (i->second.m_sReadLock.empty() && i->second.m_sWriteLock.empty())
+      m_mLock.erase(i);
+
+   return 0;
 }
 
 int Metadata::parsePath(const string& path, vector<string>& result)
