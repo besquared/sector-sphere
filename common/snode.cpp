@@ -50,7 +50,12 @@ written by
 
 using namespace std;
 
-SNode::SNode()
+SNode::SNode():
+m_strName(""),
+m_bIsDir(false),
+m_llTimeStamp(0),
+m_llSize(0),
+m_strChecksum("")
 {
    m_sLocation.clear();
    m_mDirectory.clear();
