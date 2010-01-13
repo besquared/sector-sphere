@@ -12,12 +12,14 @@ int main(int argc, char** argv)
       return -1;
    }
 
+   Sector client;
+
    Session s;
    s.loadInfo("../../conf/client.conf");
 
-   if (Sector::init(s.m_ClientConf.m_strMasterIP, s.m_ClientConf.m_iMasterPort) < 0)
+   if (client.init(s.m_ClientConf.m_strMasterIP, s.m_ClientConf.m_iMasterPort) < 0)
       return -1;
-   if (Sector::login(s.m_ClientConf.m_strUserName, s.m_ClientConf.m_strPassword, s.m_ClientConf.m_strCertificate.c_str()) < 0)
+   if (client.login(s.m_ClientConf.m_strUserName, s.m_ClientConf.m_strPassword, s.m_ClientConf.m_strCertificate.c_str()) < 0)
       return -1;
 
    string path = argv[1];
@@ -25,14 +27,14 @@ int main(int argc, char** argv)
 
    if (!wc)
    {
-      int r = Sector::move(argv[1], argv[2]);
+      int r = client.move(argv[1], argv[2]);
       if (r < 0)
          cout << "ERROR: " << r << " " << SectorError::getErrorMsg(r) << endl;
    }
    else
    {
       SNode attr;
-      if (Sector::stat(argv[2], attr) < 0)
+      if (client.stat(argv[2], attr) < 0)
       {
          cout << "destination directory does not exist.\n";
       }
@@ -49,7 +51,7 @@ int main(int argc, char** argv)
          }
 
          vector<SNode> filelist;
-         int r = Sector::list(path, filelist);
+         int r = client.list(path, filelist);
          if (r < 0)
             cout << "ERROR: " << r << " " << SectorError::getErrorMsg(r) << endl;
 
@@ -61,12 +63,12 @@ int main(int argc, char** argv)
          }
 
          for (vector<string>::iterator i = filtered.begin(); i != filtered.end(); ++ i)
-            Sector::move(*i, argv[2]);
+            client.move(*i, argv[2]);
       }
    }
 
-   Sector::logout();
-   Sector::close();
+   client.logout();
+   client.close();
 
    return 1;
 }

@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright (c) 2005 - 2009, The Board of Trustees of the University of Illinois.
+Copyright (c) 2005 - 2010, The Board of Trustees of the University of Illinois.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 12/27/2009
+   Yunhong Gu, last updated 01/12/2010
 *****************************************************************************/
 
 #ifndef __SPHERE_CLIENT_H__
@@ -72,6 +72,8 @@ public:
    int64_t m_llStart;			// start point (record)
    int64_t m_llEnd;			// end point (record), -1 means the last record
 
+   std::vector<std::string> m_vOrigInput;	// original input files or dirs, need SphereStream::prepareInput to further process
+
    int m_iStatus;			// 0: uninitialized, 1: initialized, -1: bad
 };
 
@@ -96,12 +98,16 @@ public:
    int64_t m_llOrigEndRec;	// last record of the original input file
 };
 
-class SphereProcess: public Client
+class SphereProcess
 {
-public:
+friend class Client;
+
+private:
    SphereProcess();
    ~SphereProcess();
+   const SphereProcess& operator=(const SphereProcess&) {return *this;}
 
+public:
    int close();
 
    int loadOperator(const char* library);
@@ -207,6 +213,8 @@ private:
    int loadOperator(SPE& s);
 
 private:
+   int dataInfo(const std::vector<std::string>& files, std::vector<std::string>& info);
+   int prepareInput(SphereStream& ss);
    int prepareSPE(const char* spenodes);
    int segmentData();
    int prepareOutput(const char* spenodes);
@@ -220,6 +228,10 @@ private:
    int connectSPE(SPE& s);
    int checkBucket();
    int readResult(SPE* s);
+
+private:
+   Client* m_pClient;
+   int m_iID;
 };
 
 #endif

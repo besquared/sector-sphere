@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright (c) 2005 - 2009, The Board of Trustees of the University of Illinois.
+Copyright (c) 2005 - 2010, The Board of Trustees of the University of Illinois.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 09/19/2009
+   Yunhong Gu [gu@lac.uic.edu], last updated 01/12/2010
 *****************************************************************************/
 
 #ifndef __SECTOR_FS_CLIENT_H__
@@ -43,11 +43,14 @@ written by
 
 #include <client.h>
 
-class SectorFile: public Client
+class SectorFile
 {
-public:
+friend class Client;
+
+private:
    SectorFile();
-   virtual ~SectorFile();
+   ~SectorFile();
+   const SectorFile& operator=(const SectorFile&) {return *this;}
 
 public:
    int open(const std::string& filename, int mode = SF_MODE::READ, const std::string& hint = "");
@@ -86,6 +89,10 @@ private:
 
 private:
    pthread_mutex_t m_FileLock;
+
+private:
+   Client* m_pClient;		// client instance
+   int m_iID;			// sector file id, for client internal use
 };
 
 #endif

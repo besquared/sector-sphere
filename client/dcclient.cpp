@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright (c) 2005 - 2009, The Board of Trustees of the University of Illinois.
+Copyright (c) 2005 - 2010, The Board of Trustees of the University of Illinois.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 09/12/2009
+   Yunhong Gu, last updated 01/12/2010
 *****************************************************************************/
 
 #include "dcclient.h"
@@ -44,6 +44,28 @@ written by
 #include <iostream>
 
 using namespace std;
+
+SphereProcess* Client::createSphereProcess()
+{
+   SphereProcess* sp = new SphereProcess;
+   sp->m_pClient = this;
+   pthread_mutex_lock(&m_IDLock);
+   sp->m_iID = m_iID ++;
+   m_mDCList[sp->m_iID] = sp;
+   pthread_mutex_unlock(&m_IDLock);
+
+   return sp;
+}
+
+int Client::releaseSphereProcess(SphereProcess* sp)
+{
+   pthread_mutex_lock(&m_IDLock);
+   m_mDCList.erase(sp->m_iID);
+   pthread_mutex_unlock(&m_IDLock);
+   delete sp;
+
+   return 0;
+}
 
 SphereStream::SphereStream():
 m_iFileNum(0),
@@ -64,134 +86,10 @@ SphereStream::~SphereStream()
 
 }
 
-int Client::dataInfo(const vector<string>& files, vector<string>& info)
-{
-   SectorMsg msg;
-   msg.setType(201);
-   msg.setKey(g_iKey);
-
-   int offset = 0;
-   int32_t size = -1;
-   for (vector<string>::const_iterator i = files.begin(); i != files.end(); ++ i)
-   {
-      string path = Metadata::revisePath(*i);
-      size = path.length() + 1;
-      msg.setData(offset, (char*)&size, 4);
-      msg.setData(offset + 4, path.c_str(), size);
-      offset += 4 + size;
-   }
-
-   size = -1;
-   msg.setData(offset, (char*)&size, 4);
-
-   Address serv;
-   g_Routing.getPrimaryMaster(serv);
-   if (g_GMP.rpc(serv.m_strIP.c_str(), serv.m_iPort, &msg, &msg) < 0)
-      return SectorError::E_CONNECTION;
-
-   if (msg.getType() < 0)
-      return *(int32_t*)(msg.getData());
-
-   char* buf = msg.getData();
-   size = msg.m_iDataLength - SectorMsg::m_iHdrSize;
-
-   while (size > 0)
-   {
-      info.insert(info.end(), buf);
-      size -= strlen(buf) + 1;
-      buf += strlen(buf) + 1;
-   }
-
-   return info.size();
-}
-
 int SphereStream::init(const vector<string>& files)
 {
-   vector<string> datainfo;
-   int res = Client::dataInfo(files, datainfo);
-   if (res < 0)
-      return res;
-
-   m_iFileNum = datainfo.size();
-   if (0 == m_iFileNum)
-      return 0;
-
-   m_iStatus = -1;
-
-   m_vFiles.resize(m_iFileNum);
-   m_vSize.resize(m_iFileNum);
-   m_vRecNum.resize(m_iFileNum);
-   m_vLocation.resize(m_iFileNum);
-   vector<string>::iterator f = m_vFiles.begin();
-   vector<int64_t>::iterator s = m_vSize.begin();
-   vector<int64_t>::iterator r = m_vRecNum.begin();
-   vector< set<Address, AddrComp> >::iterator a = m_vLocation.begin();
-
-   bool indexfound = true;
-
-   for (vector<string>::iterator i = datainfo.begin(); i != datainfo.end(); ++ i)
-   {
-      char* buf = new char[i->length() + 2];
-      strcpy(buf, i->c_str());
-      buf[strlen(buf) + 1] = '\0';
-
-      //file_name 5105847 -1 192.168.136.30 37209 192.168.136.32 39805
-
-      int n = strlen(buf) + 1;
-      char* p = buf;
-      for (int j = 0; j < n; ++ j, ++ p)
-      {
-         if (*p == ' ')
-            *p = '\0';
-      }
-      p = buf;
-
-      *f = p;
-      p = p + strlen(p) + 1;
-      *s = atoll(p);
-      m_llSize += *s;
-      p = p + strlen(p) + 1;
-      *r = atoi(p);
-      p = p + strlen(p) + 1;
-
-      if (*r == -1)
-      {
-         // no record index found
-         m_llRecNum = -1;
-         indexfound = false;
-      }
-      else if (indexfound)
-      {
-         m_llRecNum += *r;
-      }
-
-      // retrieve all the locations
-      while (true)
-      {
-         if (strlen(p) == 0)
-            break;
-
-         Address addr;
-         addr.m_strIP = p;
-         p = p + strlen(p) + 1;
-         addr.m_iPort = atoi(p);
-         p = p + strlen(p) + 1;
-
-         a->insert(addr);
-      }
-
-      delete [] buf;
-
-      f ++;
-      s ++;
-      r ++;
-      a ++;
-   }
-
-   m_llEnd = m_llRecNum;
-
-   m_iStatus = 1;
-   return m_iFileNum;
+   m_vOrigInput = files;
+   return 0;
 }
 
 int SphereStream::init(const int& num)
@@ -332,11 +230,11 @@ int SphereProcess::loadOperator(const char* library)
 int SphereProcess::loadOperator(SPE& s)
 {
    int num = m_vOP.size();
-   g_DataChn.send(s.m_strIP, s.m_iDataPort, s.m_iSession, (char*)&num, 4);
+   m_pClient->m_DataChn.send(s.m_strIP, s.m_iDataPort, s.m_iSession, (char*)&num, 4);
 
    for (vector<OP>::iterator i = m_vOP.begin(); i != m_vOP.end(); ++ i)
    {
-      g_DataChn.send(s.m_strIP, s.m_iDataPort, s.m_iSession, i->m_strLibrary.c_str(), i->m_strLibrary.length() + 1);
+      m_pClient->m_DataChn.send(s.m_strIP, s.m_iDataPort, s.m_iSession, i->m_strLibrary.c_str(), i->m_strLibrary.length() + 1);
 
       ifstream lib;
       lib.open(i->m_strLibPath.c_str(), ios::in | ios::binary);
@@ -344,7 +242,7 @@ int SphereProcess::loadOperator(SPE& s)
       lib.read(buf, i->m_iSize);
       lib.close();
 
-      g_DataChn.send(s.m_strIP, s.m_iDataPort, s.m_iSession, buf, i->m_iSize);
+      m_pClient->m_DataChn.send(s.m_strIP, s.m_iDataPort, s.m_iSession, buf, i->m_iSize);
    }
 
    return 0;
@@ -380,12 +278,12 @@ int SphereProcess::run(const SphereStream& input, SphereStream& output, const st
 
    SectorMsg msg;
    msg.setType(202); // locate available SPE
-   msg.setKey(g_iKey);
+   msg.setKey(m_pClient->m_iKey);
    msg.m_iDataLength = SectorMsg::m_iHdrSize;
 
    Address serv;
-   g_Routing.getPrimaryMaster(serv);
-   if ((g_GMP.rpc(serv.m_strIP.c_str(), serv.m_iPort, &msg, &msg) < 0) || (msg.getType() < 0))
+   m_pClient->m_Routing.getPrimaryMaster(serv);
+   if ((m_pClient->m_GMP.rpc(serv.m_strIP.c_str(), serv.m_iPort, &msg, &msg) < 0) || (msg.getType() < 0))
    {
       cerr << "unable to locate any SPE.\n";
       return -1;
@@ -478,7 +376,7 @@ void* SphereProcess::run(void* param)
       int port;
       int tmp;
       SectorMsg msg;
-      if (self->g_GMP.recvfrom(ip, port, tmp, &msg, false) < 0)
+      if (self->m_pClient->m_GMP.recvfrom(ip, port, tmp, &msg, false) < 0)
          continue;
 
       int32_t speid = *(int32_t*)(msg.getData());
@@ -537,7 +435,7 @@ void* SphereProcess::run(void* param)
 
    // disconnect all SPEs and close all Shufflers
    for (map<int, SPE>::iterator i = self->m_mSPE.begin(); i != self->m_mSPE.end(); ++ i)
-      g_DataChn.remove(i->second.m_strIP, i->second.m_iDataPort);
+      self->m_pClient->m_DataChn.remove(i->second.m_strIP, i->second.m_iDataPort);
 
    for(map<int, BUCKET>::iterator i = self->m_mBucket.begin(); i != self->m_mBucket.end(); ++ i)
    {
@@ -545,7 +443,7 @@ void* SphereProcess::run(void* param)
       int32_t cmd = -1;
       msg.setData(0, (char*)&cmd, 4);
       int id = 0;
-      self->g_GMP.sendto(i->second.m_strIP.c_str(), i->second.m_iShufflerPort, id, &msg);
+      self->m_pClient->m_GMP.sendto(i->second.m_strIP.c_str(), i->second.m_iShufflerPort, id, &msg);
    }
 
    //TODO: need to detect lost slaves
@@ -555,7 +453,7 @@ void* SphereProcess::run(void* param)
       int port;
       int tmp;
       SectorMsg msg;
-      if (self->g_GMP.recvfrom(ip, port, tmp, &msg, false) < 0)
+      if (self->m_pClient->m_GMP.recvfrom(ip, port, tmp, &msg, false) < 0)
          continue;
 
       int32_t bucketid = *(int32_t*)(msg.getData());
@@ -563,7 +461,7 @@ void* SphereProcess::run(void* param)
       if (b == self->m_mBucket.end())
          continue;
       b->second.m_iProgress = 100;
-      g_DataChn.remove(b->second.m_strIP, b->second.m_iDataPort);
+      self->m_pClient->m_DataChn.remove(b->second.m_strIP, b->second.m_iDataPort);
 
       pthread_cond_signal(&self->m_ResCond);
    }
@@ -623,7 +521,7 @@ int SphereProcess::checkSPE()
             if (0 != d->second->m_iStatus)
                continue;
 
-            unsigned int dist = Client::g_Topology.distance(sn, *(d->second->m_pLoc));
+            unsigned int dist = m_pClient->m_Topology.distance(sn, *(d->second->m_pLoc));
 
             if (dist < MinDist)
             {
@@ -665,7 +563,7 @@ int SphereProcess::checkSPE()
       }
       else 
       {
-         if (g_DataChn.isConnected(s->second.m_strIP, s->second.m_iDataPort))
+         if (m_pClient->m_DataChn.isConnected(s->second.m_strIP, s->second.m_iDataPort))
          {
             spe_busy = true;
 
@@ -684,7 +582,7 @@ int SphereProcess::checkSPE()
 
             // dismiss this SPE and release its job
             s->second.m_iStatus = -1;
-            g_DataChn.remove(s->second.m_strIP, s->second.m_iDataPort);
+            m_pClient->m_DataChn.remove(s->second.m_strIP, s->second.m_iDataPort);
             m_iTotalSPE --;
 
             pthread_mutex_lock(&m_DSLock);
@@ -753,7 +651,7 @@ int SphereProcess::startSPE(SPE& s, DS* d)
    *(int32_t*)(dataseg + 16) = s.m_pDS->m_iID;
    strcpy(dataseg + 20, s.m_pDS->m_strDataFile.c_str());
 
-   if (g_DataChn.send(s.m_strIP, s.m_iDataPort, s.m_iSession, dataseg, size) > 0)
+   if (m_pClient->m_DataChn.send(s.m_strIP, s.m_iDataPort, s.m_iSession, dataseg, size) > 0)
    {
       d->m_iSPEID = s.m_iID;
       d->m_iStatus = 1;
@@ -875,6 +773,140 @@ int SphereProcess::read(SphereResult*& res, const bool& inorder, const bool& wai
    return -1;
 }
 
+int SphereProcess::dataInfo(const vector<string>& files, vector<string>& info)
+{
+   SectorMsg msg;
+   msg.setType(201);
+   msg.setKey(m_pClient->m_iKey);
+
+   int offset = 0;
+   int32_t size = -1;
+   for (vector<string>::const_iterator i = files.begin(); i != files.end(); ++ i)
+   {
+      string path = Metadata::revisePath(*i);
+      size = path.length() + 1;
+      msg.setData(offset, (char*)&size, 4);
+      msg.setData(offset + 4, path.c_str(), size);
+      offset += 4 + size;
+   }
+
+   size = -1;
+   msg.setData(offset, (char*)&size, 4);
+
+   Address serv;
+   m_pClient->m_Routing.getPrimaryMaster(serv);
+   if (m_pClient->m_GMP.rpc(serv.m_strIP.c_str(), serv.m_iPort, &msg, &msg) < 0)
+      return SectorError::E_CONNECTION;
+
+   if (msg.getType() < 0)
+      return *(int32_t*)(msg.getData());
+
+   char* buf = msg.getData();
+   size = msg.m_iDataLength - SectorMsg::m_iHdrSize;
+
+   while (size > 0)
+   {
+      info.insert(info.end(), buf);
+      size -= strlen(buf) + 1;
+      buf += strlen(buf) + 1;
+   }
+
+   return info.size();
+}
+
+
+int SphereProcess::prepareInput(SphereStream& ss)
+{
+   if ((ss.m_iStatus != 0) || ss.m_vOrigInput.empty())
+      return -1;
+
+   vector<string> datainfo;
+   int res = dataInfo(ss.m_vOrigInput, datainfo);
+   if (res < 0)
+      return res;
+
+   ss.m_iFileNum = datainfo.size();
+   if (0 == ss.m_iFileNum)
+      return 0;
+
+   ss.m_iStatus = -1;
+
+   ss.m_vFiles.resize(ss.m_iFileNum);
+   ss.m_vSize.resize(ss.m_iFileNum);
+   ss.m_vRecNum.resize(ss.m_iFileNum);
+   ss.m_vLocation.resize(ss.m_iFileNum);
+   vector<string>::iterator f = ss.m_vFiles.begin();
+   vector<int64_t>::iterator s = ss.m_vSize.begin();
+   vector<int64_t>::iterator r = ss.m_vRecNum.begin();
+   vector< set<Address, AddrComp> >::iterator a = ss.m_vLocation.begin();
+
+   bool indexfound = true;
+
+   for (vector<string>::iterator i = datainfo.begin(); i != datainfo.end(); ++ i)
+   {
+      char* buf = new char[i->length() + 2];
+      strcpy(buf, i->c_str());
+      buf[strlen(buf) + 1] = '\0';
+
+      //file_name 800 -1 192.168.136.30 37209 192.168.136.32 39805
+
+      int n = strlen(buf) + 1;
+      char* p = buf;
+      for (int j = 0; j < n; ++ j, ++ p)
+      {
+         if (*p == ' ')
+            *p = '\0';
+      }
+      p = buf;
+
+      *f = p;
+      p = p + strlen(p) + 1;
+      *s = atoll(p);
+      ss.m_llSize += *s;
+      p = p + strlen(p) + 1;
+      *r = atoi(p);
+      p = p + strlen(p) + 1;
+
+      if (*r == -1)
+      {
+         // no record index found
+         ss.m_llRecNum = -1;
+         indexfound = false;
+      }
+      else if (indexfound)
+      {
+         ss.m_llRecNum += *r;
+      }
+
+      // retrieve all the locations
+      while (true)
+      {
+         if (strlen(p) == 0)
+            break;
+
+         Address addr;
+         addr.m_strIP = p;
+         p = p + strlen(p) + 1;
+         addr.m_iPort = atoi(p);
+         p = p + strlen(p) + 1;
+
+         a->insert(addr);
+      }
+
+      delete [] buf;
+
+      f ++;
+      s ++;
+      r ++;
+      a ++;
+   }
+
+   ss.m_llEnd = ss.m_llRecNum;
+
+   ss.m_iStatus = 1;
+   return ss.m_iFileNum;
+}
+
 int SphereProcess::prepareSPE(const char* spenodes)
 {
    for (int c = 0; c < m_iCore; ++ c)
@@ -905,12 +937,12 @@ int SphereProcess::connectSPE(SPE& s)
 
    SectorMsg msg;
    msg.setType(203); // start processing engine
-   msg.setKey(g_iKey);
+   msg.setKey(m_pClient->m_iKey);
    msg.setData(0, s.m_strIP.c_str(), s.m_strIP.length() + 1);
    msg.setData(64, (char*)&(s.m_iPort), 4);
    // leave a 4-byte blank spot for data port
    msg.setData(72, (char*)&(s.m_iID), 4);
-   msg.setData(76, (char*)&g_iKey, 4);
+   msg.setData(76, (char*)&m_pClient->m_iKey, 4);
    msg.setData(80, m_strOperator.c_str(), m_strOperator.length() + 1);
    int offset = 80 + m_strOperator.length() + 1;
    msg.setData(offset, (char*)&m_iRows, 4);
@@ -920,8 +952,8 @@ int SphereProcess::connectSPE(SPE& s)
    msg.setData(offset, (char*)&m_iProcType, 4);
 
    Address serv;
-   g_Routing.getPrimaryMaster(serv);
-   if ((g_GMP.rpc(serv.m_strIP.c_str(), serv.m_iPort, &msg, &msg) < 0) || (msg.getType() < 0))
+   m_pClient->m_Routing.getPrimaryMaster(serv);
+   if ((m_pClient->m_GMP.rpc(serv.m_strIP.c_str(), serv.m_iPort, &msg, &msg) < 0) || (msg.getType() < 0))
    {
       cerr << "failed to connect SPE " << s.m_strIP << " " << s.m_iPort << endl;
       return -1;
@@ -929,20 +961,20 @@ int SphereProcess::connectSPE(SPE& s)
 
    s.m_iSession = *(int*)msg.getData();
 
-   g_DataChn.connect(s.m_strIP, s.m_iDataPort);
+   m_pClient->m_DataChn.connect(s.m_strIP, s.m_iDataPort);
 
    cout << "connect SPE " << s.m_strIP.c_str() << " " << *(int*)(msg.getData()) << endl;
 
    // send output information
-   g_DataChn.send(s.m_strIP, s.m_iDataPort, s.m_iSession, (char*)&m_iOutputType, 4);
+   m_pClient->m_DataChn.send(s.m_strIP, s.m_iDataPort, s.m_iSession, (char*)&m_iOutputType, 4);
    if (m_iOutputType > 0)
    {
       int bnum = m_mBucket.size();
-      g_DataChn.send(s.m_strIP, s.m_iDataPort, s.m_iSession, (char*)&bnum, 4);
-      g_DataChn.send(s.m_strIP, s.m_iDataPort, s.m_iSession, m_pOutputLoc, bnum * 80);
+      m_pClient->m_DataChn.send(s.m_strIP, s.m_iDataPort, s.m_iSession, (char*)&bnum, 4);
+      m_pClient->m_DataChn.send(s.m_strIP, s.m_iDataPort, s.m_iSession, m_pOutputLoc, bnum * 80);
    }
    else if (m_iOutputType < 0)
-      g_DataChn.send(s.m_strIP, s.m_iDataPort, s.m_iSession, m_pOutputLoc, strlen(m_pOutputLoc) + 1);
+      m_pClient->m_DataChn.send(s.m_strIP, s.m_iDataPort, s.m_iSession, m_pOutputLoc, strlen(m_pOutputLoc) + 1);
 
    loadOperator(s);
 
@@ -1060,7 +1092,7 @@ int SphereProcess::prepareOutput(const char* spenodes)
    {
       SectorMsg msg;
       msg.setType(204);
-      msg.setKey(g_iKey);
+      msg.setKey(m_pClient->m_iKey);
 
       for (int i = 0; i < m_iSPENum; ++ i)
       {
@@ -1077,7 +1109,7 @@ int SphereProcess::prepareOutput(const char* spenodes)
          msg.setData(offset, (char*)&size, 4);
          msg.setData(offset + 4, m_pOutput->m_strName.c_str(), m_pOutput->m_strName.length() + 1);
          offset += 4 + size;
-         msg.setData(offset, (char*)&g_iKey, 4);
+         msg.setData(offset, (char*)&m_pClient->m_iKey, 4);
          offset += 4;
          msg.setData(offset, (char*)&m_iProcType, 4);
          if (m_iProcType == 1)
@@ -1090,8 +1122,8 @@ int SphereProcess::prepareOutput(const char* spenodes)
 
          cout << "request shuffler " << spenodes + i * 72 << " " << *(int*)(spenodes + i * 72 + 64) << endl;
          Address serv;
-         g_Routing.getPrimaryMaster(serv);
-         if ((g_GMP.rpc(serv.m_strIP.c_str(), serv.m_iPort, &msg, &msg) < 0) || (msg.getType() < 0))
+         m_pClient->m_Routing.getPrimaryMaster(serv);
+         if ((m_pClient->m_GMP.rpc(serv.m_strIP.c_str(), serv.m_iPort, &msg, &msg) < 0) || (msg.getType() < 0))
             continue;
 
          BUCKET b;
@@ -1106,7 +1138,7 @@ int SphereProcess::prepareOutput(const char* spenodes)
          m_mBucket[b.m_iID] = b;
 
          // set up data connection, not for data transfter, but for keep-alive
-         g_DataChn.connect(b.m_strIP, b.m_iDataPort);
+         m_pClient->m_DataChn.connect(b.m_strIP, b.m_iDataPort);
       }
 
       if (m_mBucket.empty())
@@ -1158,9 +1190,9 @@ int SphereProcess::readResult(SPE* s)
 {
    if (m_iOutputType == 0)
    {
-      g_DataChn.recv(s->m_strIP, s->m_iDataPort, s->m_iSession, s->m_pDS->m_pResult->m_pcData, s->m_pDS->m_pResult->m_iDataLen);
+      m_pClient->m_DataChn.recv(s->m_strIP, s->m_iDataPort, s->m_iSession, s->m_pDS->m_pResult->m_pcData, s->m_pDS->m_pResult->m_iDataLen);
       char* tmp = NULL;
-      g_DataChn.recv(s->m_strIP, s->m_iDataPort, s->m_iSession, tmp, s->m_pDS->m_pResult->m_iIndexLen);
+      m_pClient->m_DataChn.recv(s->m_strIP, s->m_iDataPort, s->m_iSession, tmp, s->m_pDS->m_pResult->m_iIndexLen);
       s->m_pDS->m_pResult->m_pllIndex = (int64_t*)tmp;
       s->m_pDS->m_pResult->m_iIndexLen /= 8;
 
@@ -1172,11 +1204,11 @@ int SphereProcess::readResult(SPE* s)
    else if (m_iOutputType == -1)
    {
       int size = 0;
-      g_DataChn.recv4(s->m_strIP, s->m_iDataPort, s->m_iSession, size);
+      m_pClient->m_DataChn.recv4(s->m_strIP, s->m_iDataPort, s->m_iSession, size);
       m_pOutput->m_vSize[s->m_pDS->m_iID] = size;
       m_pOutput->m_llSize += size;
 
-      g_DataChn.recv4(s->m_strIP, s->m_iDataPort, s->m_iSession, size);
+      m_pClient->m_DataChn.recv4(s->m_strIP, s->m_iDataPort, s->m_iSession, size);
       m_pOutput->m_vRecNum[s->m_pDS->m_iID] = size - 1;
       m_pOutput->m_llRecNum += size -1;
 
@@ -1190,8 +1222,8 @@ int SphereProcess::readResult(SPE* s)
       char* sarray = NULL;
       char* rarray = NULL;
       int size;
-      g_DataChn.recv(s->m_strIP, s->m_iDataPort, s->m_iSession, sarray, size);
-      g_DataChn.recv(s->m_strIP, s->m_iDataPort, s->m_iSession, rarray, size);
+      m_pClient->m_DataChn.recv(s->m_strIP, s->m_iDataPort, s->m_iSession, sarray, size);
+      m_pClient->m_DataChn.recv(s->m_strIP, s->m_iDataPort, s->m_iSession, rarray, size);
 
       for (int i = 0; i < m_pOutput->m_iFileNum; ++ i)
       {

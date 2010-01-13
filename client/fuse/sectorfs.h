@@ -73,6 +73,7 @@ public:
    static int lock(const char *, struct fuse_file_info *, int cmd, struct flock *);
 
 public:
+   static Sector g_SectorClient;
    static Session g_SectorConfig;
 
 private:

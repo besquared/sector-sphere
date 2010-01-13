@@ -12,12 +12,14 @@ int main(int argc, char** argv)
       return 0;
    }
 
+   Sector client;
+
    Session s;
    s.loadInfo("../../conf/client.conf");
 
-   if (Sector::init(s.m_ClientConf.m_strMasterIP, s.m_ClientConf.m_iMasterPort) < 0)
+   if (client.init(s.m_ClientConf.m_strMasterIP, s.m_ClientConf.m_iMasterPort) < 0)
       return -1;
-   if (Sector::login(s.m_ClientConf.m_strUserName, s.m_ClientConf.m_strPassword, s.m_ClientConf.m_strCertificate.c_str()) < 0)
+   if (client.login(s.m_ClientConf.m_strUserName, s.m_ClientConf.m_strPassword, s.m_ClientConf.m_strCertificate.c_str()) < 0)
       return -1;
 
    vector<string> files;
@@ -34,16 +36,16 @@ int main(int argc, char** argv)
    output.setOutputPath("/mrword", "inverted_index");
    output.init(256);
 
-   SphereProcess myproc;
+   SphereProcess* myproc = client.createSphereProcess();
 
-   if (myproc.loadOperator("./funcs/mr_word.so") < 0)
+   if (myproc->loadOperator("./funcs/mr_word.so") < 0)
       return -1;
 
    timeval t;
    gettimeofday(&t, 0);
    cout << "start time " << t.tv_sec << endl;
 
-   if (myproc.run_mr(input, output, "mr_word", 0) < 0)
+   if (myproc->run_mr(input, output, "mr_word", 0) < 0)
    {
       cout << "failed to find any computing resources." << endl;
       return -1;
@@ -54,29 +56,33 @@ int main(int argc, char** argv)
    t2 = t1;
    while (true)
    {
-      SphereResult* res;
+      SphereResult* res = NULL;
 
-      if (myproc.read(res) < 0)
+      if (myproc->read(res) <= 0)
       {
-         if (myproc.checkMapProgress() <= 0)
+         if (myproc->checkMapProgress() <= 0)
          {
             cerr << "all SPEs failed\n";
             break;
          }
 
-         if (myproc.checkMapProgress() == 100)
+         if (myproc->checkMapProgress() == 100)
             break;
+      }
+      else
+      {
+         delete res;
       }
 
       gettimeofday(&t2, 0);
       if (t2.tv_sec - t1.tv_sec > 60)
       {
-         cout << "MAP PROGRESS: " << myproc.checkProgress() << "%" << endl;
+         cout << "MAP PROGRESS: " << myproc->checkProgress() << "%" << endl;
          t1 = t2;
       }
    }
 
-   while (myproc.checkReduceProgress() < 100)
+   while (myproc->checkReduceProgress() < 100)
    {
       usleep(10);
    }
@@ -86,10 +92,11 @@ int main(int argc, char** argv)
 
    cout << "SPE COMPLETED " << endl;
 
-   myproc.close();
+   myproc->close();
+   client.releaseSphereProcess(myproc);
 
-   Sector::logout();
-   Sector::close();
+   client.logout();
+   client.close();
 
    return 0;
 }

@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright (c) 2005 - 2009, The Board of Trustees of the University of Illinois.
+Copyright (c) 2005 - 2010, The Board of Trustees of the University of Illinois.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 09/19/2009
+   Yunhong Gu, last updated 01/12/2010
 *****************************************************************************/
 
 
@@ -44,6 +44,29 @@ written by
 #include <iostream>
 
 using namespace std;
+
+SectorFile* Client::createSectorFile()
+{
+   SectorFile* sf = new SectorFile;
+   sf->m_pClient = this;
+   pthread_mutex_lock(&m_IDLock);
+   sf->m_iID = m_iID ++;
+   m_mFSList[sf->m_iID] = sf;
+   pthread_mutex_unlock(&m_IDLock);
+
+   return sf;
+}
+
+int Client::releaseSectorFile(SectorFile* sf)
+{
+   pthread_mutex_lock(&m_IDLock);
+   m_mFSList.erase(sf->m_iID);
+   pthread_mutex_unlock(&m_IDLock);
+   delete sf;
+
+   return 0;
+}
+
 
 SectorFile::SectorFile():
 m_iSession(),
@@ -74,18 +97,18 @@ int SectorFile::open(const string& filename, int mode, const string& hint)
 
    SectorMsg msg;
    msg.setType(110); // open the file
-   msg.setKey(g_iKey);
+   msg.setKey(m_pClient->m_iKey);
 
    int32_t m = mode;
    msg.setData(0, (char*)&m, 4);
-   int32_t port = g_DataChn.getPort();
+   int32_t port = m_pClient->m_DataChn.getPort();
    msg.setData(4, (char*)&port, 4);
    msg.setData(8, hint.c_str(), hint.length() + 1);
    msg.setData(72, m_strFileName.c_str(), m_strFileName.length() + 1);
 
    Address serv;
-   g_Routing.lookup(m_strFileName, serv);
-   if (g_GMP.rpc(serv.m_strIP.c_str(), serv.m_iPort, &msg, &msg) < 0)
+   m_pClient->m_Routing.lookup(m_strFileName, serv);
+   if (m_pClient->m_GMP.rpc(serv.m_strIP.c_str(), serv.m_iPort, &msg, &msg) < 0)
       return SectorError::E_CONNECTION;
 
    if (msg.getType() < 0)
@@ -107,20 +130,20 @@ int SectorFile::open(const string& filename, int mode, const string& hint)
    m_iSession = *(int*)(msg.getData() + 68);
 
    cerr << "open file " << filename << " " << m_strSlaveIP << " " << m_iSlaveDataPort << endl;
-   if (g_DataChn.connect(m_strSlaveIP, m_iSlaveDataPort) < 0)
+   if (m_pClient->m_DataChn.connect(m_strSlaveIP, m_iSlaveDataPort) < 0)
       return SectorError::E_CONNECTION;
 
    string localip;
    int localport;
-   g_DataChn.getSelfAddr(m_strSlaveIP, m_iSlaveDataPort, localip, localport);
+   m_pClient->m_DataChn.getSelfAddr(m_strSlaveIP, m_iSlaveDataPort, localip, localport);
 
    if (m_strSlaveIP == localip)
    {
       // the file is on the same node, check if the file can be read directly
       int32_t cmd = 6;
-      g_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, (char*)&cmd, 4);
+      m_pClient->m_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, (char*)&cmd, 4);
       int size = 0;
-      if (g_DataChn.recv(m_strSlaveIP, m_iSlaveDataPort, m_iSession, m_pcLocalPath, size) > 0)
+      if (m_pClient->m_DataChn.recv(m_strSlaveIP, m_iSlaveDataPort, m_iSession, m_pcLocalPath, size) > 0)
       {
          fstream test((m_pcLocalPath + filename).c_str(), ios::binary | ios::in);
          if (!test.bad() && !test.fail())
@@ -128,12 +151,12 @@ int SectorFile::open(const string& filename, int mode, const string& hint)
       }
    }
 
-   memcpy(m_pcKey, g_pcCryptoKey, 16);
-   memcpy(m_pcIV, g_pcCryptoIV, 8);
-   g_DataChn.setCryptoKey(m_strSlaveIP, m_iSlaveDataPort, m_pcKey, m_pcIV);
+   memcpy(m_pcKey, m_pClient->m_pcCryptoKey, 16);
+   memcpy(m_pcIV, m_pClient->m_pcCryptoIV, 8);
+   m_pClient->m_DataChn.setCryptoKey(m_strSlaveIP, m_iSlaveDataPort, m_pcKey, m_pcIV);
 
    if (m_bWrite)
-      g_StatCache.insert(filename);
+      m_pClient->m_StatCache.insert(filename);
 
    return 0;
 }
@@ -158,20 +181,20 @@ int64_t SectorFile::read(char* buf, const int64_t& size)
 
    // read command: 1
    int32_t cmd = 1;
-   g_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, (char*)&cmd, 4);
+   m_pClient->m_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, (char*)&cmd, 4);
 
    int response = -1;
-   if ((g_DataChn.recv4(m_strSlaveIP, m_iSlaveDataPort, m_iSession, response) < 0) || (-1 == response))
+   if ((m_pClient->m_DataChn.recv4(m_strSlaveIP, m_iSlaveDataPort, m_iSession, response) < 0) || (-1 == response))
       return SectorError::E_CONNECTION;
 
    char req[16];
    *(int64_t*)req = m_llCurReadPos;
    *(int64_t*)(req + 8) = realsize;
-   if (g_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, req, 16) < 0)
+   if (m_pClient->m_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, req, 16) < 0)
       return SectorError::E_CONNECTION;
 
    char* tmp = NULL;
-   int64_t recvsize = g_DataChn.recv(m_strSlaveIP, m_iSlaveDataPort, m_iSession, tmp, realsize, m_bSecure);
+   int64_t recvsize = m_pClient->m_DataChn.recv(m_strSlaveIP, m_iSlaveDataPort, m_iSession, tmp, realsize, m_bSecure);
    if (recvsize > 0)
    {
       memcpy(buf, tmp, recvsize);
@@ -188,20 +211,20 @@ int64_t SectorFile::write(const char* buf, const int64_t& size)
 
    // write command: 2
    int32_t cmd = 2;
-   g_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, (char*)&cmd, 4);
+   m_pClient->m_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, (char*)&cmd, 4);
 
    int response = -1;
-   if ((g_DataChn.recv4(m_strSlaveIP, m_iSlaveDataPort, m_iSession, response) < 0) || (-1 == response))
+   if ((m_pClient->m_DataChn.recv4(m_strSlaveIP, m_iSlaveDataPort, m_iSession, response) < 0) || (-1 == response))
       return SectorError::E_CONNECTION;
 
    char req[16];
    *(int64_t*)req = m_llCurWritePos;
    *(int64_t*)(req + 8) = size;
 
-   if (g_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, req, 16) < 0)
+   if (m_pClient->m_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, req, 16) < 0)
       return SectorError::E_CONNECTION;
 
-   int64_t sentsize = g_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, buf, size, m_bSecure);
+   int64_t sentsize = m_pClient->m_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, buf, size, m_bSecure);
 
    if (sentsize > 0)
    {
@@ -210,7 +233,7 @@ int64_t SectorFile::write(const char* buf, const int64_t& size)
          m_llSize = m_llCurWritePos;
 
       // update the file stat information in local cache, for correct stat() call
-      g_StatCache.update(m_strFileName, CTimer::getTime(), m_llSize);
+      m_pClient->m_StatCache.update(m_strFileName, CTimer::getTime(), m_llSize);
    }
 
    return sentsize;
@@ -240,12 +263,12 @@ int SectorFile::download(const char* localpath, const bool& cont)
 
    // download command: 3
    int32_t cmd = 3;
-   g_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, (char*)&cmd, 4);
+   m_pClient->m_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, (char*)&cmd, 4);
 
    int response = -1;
-   if ((g_DataChn.recv4(m_strSlaveIP, m_iSlaveDataPort, m_iSession, response) < 0) || (-1 == response))
+   if ((m_pClient->m_DataChn.recv4(m_strSlaveIP, m_iSlaveDataPort, m_iSession, response) < 0) || (-1 == response))
       return SectorError::E_CONNECTION;
-   if (g_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, (char*)&offset, 8) < 0)
+   if (m_pClient->m_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, (char*)&offset, 8) < 0)
       return SectorError::E_CONNECTION;
 
    int64_t realsize = m_llSize - offset;
@@ -256,7 +279,7 @@ int SectorFile::download(const char* localpath, const bool& cont)
    while (torecv > 0)
    {
       int64_t block = (torecv < unit) ? torecv : unit;
-      if (g_DataChn.recvfile(m_strSlaveIP, m_iSlaveDataPort, m_iSession, ofs, offset + recd, block, m_bSecure) < 0)
+      if (m_pClient->m_DataChn.recvfile(m_strSlaveIP, m_iSlaveDataPort, m_iSession, ofs, offset + recd, block, m_bSecure) < 0)
          break;
 
       recd += block;
@@ -287,13 +310,13 @@ int SectorFile::upload(const char* localpath, const bool& cont)
 
    // upload command: 4
    int32_t cmd = 4;
-   g_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, (char*)&cmd, 4);
+   m_pClient->m_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, (char*)&cmd, 4);
 
    int response = -1;
-   if ((g_DataChn.recv4(m_strSlaveIP, m_iSlaveDataPort, m_iSession, response) < 0) || (-1 == response))
+   if ((m_pClient->m_DataChn.recv4(m_strSlaveIP, m_iSlaveDataPort, m_iSession, response) < 0) || (-1 == response))
       return SectorError::E_CONNECTION;
 
-   if (g_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, (char*)&size, 8) < 0)
+   if (m_pClient->m_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, (char*)&size, 8) < 0)
       return SectorError::E_CONNECTION;
 
    int64_t unit = 64000000; //send 64MB each time
@@ -302,7 +325,7 @@ int SectorFile::upload(const char* localpath, const bool& cont)
    while (tosend > 0)
    {
       int64_t block = (tosend < unit) ? tosend : unit;
-      if (g_DataChn.sendfile(m_strSlaveIP, m_iSlaveDataPort, m_iSession, ifs, sent, block, m_bSecure) < 0)
+      if (m_pClient->m_DataChn.sendfile(m_strSlaveIP, m_iSlaveDataPort, m_iSession, ifs, sent, block, m_bSecure) < 0)
          break;
 
       sent += block;
@@ -323,15 +346,15 @@ int SectorFile::close()
 
    // file close command: 5
    int32_t cmd = 5;
-   g_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, (char*)&cmd, 4);
+   m_pClient->m_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, (char*)&cmd, 4);
    int response;
-   g_DataChn.recv4(m_strSlaveIP, m_iSlaveDataPort, m_iSession, response);
+   m_pClient->m_DataChn.recv4(m_strSlaveIP, m_iSlaveDataPort, m_iSession, response);
 
-   //g_DataChn.releaseCoder();
-   g_DataChn.remove(m_strSlaveIP, m_iSlaveDataPort);
+   //m_pClient->m_DataChn.releaseCoder();
+   m_pClient->m_DataChn.remove(m_strSlaveIP, m_iSlaveDataPort);
 
    if (m_bWrite)
-      g_StatCache.remove(m_strFileName);
+      m_pClient->m_StatCache.remove(m_strFileName);
 
    return 1;
 }

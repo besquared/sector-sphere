@@ -13,7 +13,7 @@
 
 using namespace std;
 
-int upload(const char* file, const char* dst)
+int upload(const char* file, const char* dst, Sector& client)
 {
    timeval t1, t2;
    gettimeofday(&t1, 0);
@@ -22,19 +22,20 @@ int upload(const char* file, const char* dst)
    stat64(file, &s);
    cout << "uploading " << file << " of " << s.st_size << " bytes" << endl;
 
-   SectorFile f;
+   SectorFile* f = client.createSectorFile();
 
-   if (f.open(dst, SF_MODE::WRITE) < 0)
+   if (f->open(dst, SF_MODE::WRITE) < 0)
    {
       cout << "ERROR: unable to connect to server or file already exists." << endl;
       return -1;
    }
 
    bool finish = true;
-   if (f.upload(file) < 0)
+   if (f->upload(file) < 0)
       finish = false;
 
-   f.close();
+   f->close();
+   client.releaseSectorFile(f);
 
    if (finish)
    {
@@ -96,12 +97,14 @@ int main(int argc, char** argv)
       return 0;
    }
 
+   Sector client;
+
    Session s;
    s.loadInfo("../../conf/client.conf");
 
-   if (Sector::init(s.m_ClientConf.m_strMasterIP, s.m_ClientConf.m_iMasterPort) < 0)
+   if (client.init(s.m_ClientConf.m_strMasterIP, s.m_ClientConf.m_iMasterPort) < 0)
       return -1;
-   if (Sector::login(s.m_ClientConf.m_strUserName, s.m_ClientConf.m_strPassword, s.m_ClientConf.m_strCertificate.c_str()) < 0)
+   if (client.login(s.m_ClientConf.m_strUserName, s.m_ClientConf.m_strPassword, s.m_ClientConf.m_strCertificate.c_str()) < 0)
       return -1;
 
 
@@ -168,7 +171,7 @@ int main(int argc, char** argv)
 
    string newdir = argv[2];
    SNode attr;
-   int r = Sector::stat(newdir, attr);
+   int r = client.stat(newdir, attr);
    if ((r < 0) || (!attr.m_bIsDir))
    {
       cout << "destination directory on Sector does not exist.\n";
@@ -188,13 +191,13 @@ int main(int argc, char** argv)
          continue;
 
       if (S_ISDIR(s.st_mode))
-         Sector::mkdir(dst);
+         client.mkdir(dst);
       else
-         upload(i->c_str(), dst.c_str());
+         upload(i->c_str(), dst.c_str(), client);
    }
 
-   Sector::logout();
-   Sector::close();
+   client.logout();
+   client.close();
 
    return 1;
 }

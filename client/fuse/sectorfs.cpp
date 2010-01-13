@@ -5,6 +5,7 @@
 
 using namespace std;
 
+Sector SectorFS::g_SectorClient;
 Session SectorFS::g_SectorConfig;
 map<string, FileTracker*> SectorFS::m_mOpenFileList;
 pthread_mutex_t SectorFS::m_OpenFileLock = PTHREAD_MUTEX_INITIALIZER;
@@ -12,9 +13,9 @@ bool SectorFS::g_bRunning = false;
 
 void* SectorFS::init(struct fuse_conn_info *conn)
 {
-   if (Sector::init(g_SectorConfig.m_ClientConf.m_strMasterIP, g_SectorConfig.m_ClientConf.m_iMasterPort) < 0)
+   if (g_SectorClient.init(g_SectorConfig.m_ClientConf.m_strMasterIP, g_SectorConfig.m_ClientConf.m_iMasterPort) < 0)
       return NULL;
-   if (Sector::login(g_SectorConfig.m_ClientConf.m_strUserName, g_SectorConfig.m_ClientConf.m_strPassword, g_SectorConfig.m_ClientConf.m_strCertificate.c_str()) < 0)
+   if (g_SectorClient.login(g_SectorConfig.m_ClientConf.m_strUserName, g_SectorConfig.m_ClientConf.m_strPassword, g_SectorConfig.m_ClientConf.m_strCertificate.c_str()) < 0)
       return NULL;
 
    g_bRunning = true;
@@ -29,14 +30,14 @@ void SectorFS::destroy(void *)
 {
    g_bRunning = false;
 
-   Sector::logout();
-   Sector::close();
+   g_SectorClient.logout();
+   g_SectorClient.close();
 }
 
 int SectorFS::getattr(const char* path, struct stat* st)
 {
    SNode s;
-   int r = Sector::stat(path, s);
+   int r = g_SectorClient.stat(path, s);
    if (r < 0)
       return translateErr(r);
 
@@ -67,7 +68,7 @@ int SectorFS::mknod(const char *, mode_t, dev_t)
 
 int SectorFS::mkdir(const char* path, mode_t mode)
 {
-   int r = Sector::mkdir(path);
+   int r = g_SectorClient.mkdir(path);
    if (r < 0)
       return translateErr(r);
 
@@ -76,7 +77,7 @@ int SectorFS::mkdir(const char* path, mode_t mode)
 
 int SectorFS::unlink(const char* path)
 {
-   if (Sector::remove(path) < 0)
+   if (g_SectorClient.remove(path) < 0)
       return -1;
 
    return 0;
@@ -84,7 +85,7 @@ int SectorFS::unlink(const char* path)
 
 int SectorFS::rmdir(const char* path)
 {
-   if (Sector::remove(path) < 0)
+   if (g_SectorClient.remove(path) < 0)
       return -1;
 
    return 0;
@@ -92,7 +93,7 @@ int SectorFS::rmdir(const char* path)
 
 int SectorFS::rename(const char* src, const char* dst)
 {
-   int r = Sector::move(src, dst);
+   int r = g_SectorClient.move(src, dst);
    if (r < 0)
       return translateErr(r);
 
@@ -102,7 +103,7 @@ int SectorFS::rename(const char* src, const char* dst)
 int SectorFS::statfs(const char* path, struct statvfs* buf)
 {
    SysStat s;
-   int r = Sector::sysinfo(s);
+   int r = g_SectorClient.sysinfo(s);
    if (r < 0)
       return translateErr(r);
 
@@ -119,12 +120,12 @@ int SectorFS::statfs(const char* path, struct statvfs* buf)
 
 int SectorFS::utime(const char* path, struct utimbuf* ubuf)
 {
-    return Sector::utime(path, ubuf->modtime);;
+    return g_SectorClient.utime(path, ubuf->modtime);;
 }
 
 int SectorFS::utimens(const char* path, const struct timespec tv[2])
 {
-   return Sector::utime(path, tv[1].tv_sec);
+   return g_SectorClient.utime(path, tv[1].tv_sec);
 }
 
 int SectorFS::opendir(const char *, struct fuse_file_info *)
@@ -135,7 +136,7 @@ int SectorFS::opendir(const char *, struct fuse_file_info *)
 int SectorFS::readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* info)
 {
    vector<SNode> filelist;
-   int r = Sector::list(path, filelist);
+   int r = g_SectorClient.list(path, filelist);
    if (r < 0)
       return translateErr(r);
 
@@ -224,11 +225,11 @@ int SectorFS::open(const char* path, struct fuse_file_info* fi)
       return 0;
    }
 
-   SectorFile* f = new SectorFile;
+   SectorFile* f = g_SectorClient.createSectorFile();
    int r = f->open(path, SF_MODE::READ | SF_MODE::WRITE);
    if (r < 0)
    {
-      delete f;
+      g_SectorClient.releaseSectorFile(r);
       pthread_mutex_unlock(&m_OpenFileLock);
       return translateErr(r);
    }
@@ -305,7 +306,7 @@ int SectorFS::release(const char* path, struct fuse_file_info* info)
    }
 
    t->second->m_pHandle->close();
-   delete t->second->m_pHandle;
+   g_SectorClient.releaseSectorFile(t->second->m_pHandle);
    delete t->second;
 
    m_mOpenFileList.erase(t);
@@ -346,7 +347,7 @@ void* SectorFS::HeartBeat(void*)
    while (g_bRunning)
    {
       SNode attr;
-      Sector::stat("/", attr);
+      g_SectorClient.stat("/", attr);
 
       sleep(60);
    }

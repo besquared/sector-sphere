@@ -13,12 +13,14 @@ int main(int argc, char** argv)
       return -1;
    }
 
+   Sector client;
+
    Session s;
    s.loadInfo("../../conf/client.conf");
 
-   if (Sector::init(s.m_ClientConf.m_strMasterIP, s.m_ClientConf.m_iMasterPort) < 0)
+   if (client.init(s.m_ClientConf.m_strMasterIP, s.m_ClientConf.m_iMasterPort) < 0)
       return -1;
-   if (Sector::login(s.m_ClientConf.m_strUserName, s.m_ClientConf.m_strPassword, s.m_ClientConf.m_strCertificate.c_str()) < 0)
+   if (client.login(s.m_ClientConf.m_strUserName, s.m_ClientConf.m_strPassword, s.m_ClientConf.m_strCertificate.c_str()) < 0)
       return -1;
 
    string path = argv[1];
@@ -37,7 +39,7 @@ int main(int argc, char** argv)
    }
 
    vector<SNode> filelist;
-   int r = Sector::list(path, filelist);
+   int r = client.list(path, filelist);
    if (r < 0)
    {
       cout << "ERROR: " << r << " " << SectorError::getErrorMsg(r) << endl;
@@ -59,8 +61,8 @@ int main(int argc, char** argv)
       }
    }
 
-   Sector::logout();
-   Sector::close();
+   client.logout();
+   client.close();
 
    return 1;
 }

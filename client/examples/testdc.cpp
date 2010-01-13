@@ -13,19 +13,21 @@ int main(int argc, char** argv)
       return 0;
    }
 
+   Sector client;
+
    Session se;
    se.loadInfo("../../conf/client.conf");
 
-   if (Sector::init(se.m_ClientConf.m_strMasterIP, se.m_ClientConf.m_iMasterPort) < 0)
+   if (client.init(se.m_ClientConf.m_strMasterIP, se.m_ClientConf.m_iMasterPort) < 0)
       return -1;
-   if (Sector::login(se.m_ClientConf.m_strUserName, se.m_ClientConf.m_strPassword, se.m_ClientConf.m_strCertificate.c_str()) < 0)
+   if (client.login(se.m_ClientConf.m_strUserName, se.m_ClientConf.m_strPassword, se.m_ClientConf.m_strCertificate.c_str()) < 0)
       return -1;
 
    // remove result of last run
-   Sector::rmr("/test/sorted");
+   client.rmr("/test/sorted");
 
    SysStat sys;
-   Sector::sysinfo(sys);
+   client.sysinfo(sys);
    const int fn = sys.m_llTotalSlaves;
    const int32_t N = (int)log2(fn * 50.0f);
    const int rn = (int)pow(2.0f, N);
@@ -44,18 +46,18 @@ int main(int argc, char** argv)
    temp.setOutputPath("test/sorted", "stream_sort_bucket");
    temp.init(rn);
 
-   SphereProcess myproc;
+   SphereProcess* myproc = client.createSphereProcess();
 
-   if (myproc.loadOperator("./funcs/sorthash.so") < 0)
+   if (myproc->loadOperator("./funcs/sorthash.so") < 0)
       return -1;
-   if (myproc.loadOperator("./funcs/sort.so") < 0)
+   if (myproc->loadOperator("./funcs/sort.so") < 0)
       return -1;
 
    timeval t;
    gettimeofday(&t, 0);
    cout << "start time " << t.tv_sec << endl;
 
-   if (myproc.run(s, temp, "sorthash", 1, (char*)&N, 4) < 0)
+   if (myproc->run(s, temp, "sorthash", 1, (char*)&N, 4) < 0)
    {
       cout << "failed to find any computing resources." << endl;
       return -1;
@@ -66,24 +68,28 @@ int main(int argc, char** argv)
    t2 = t1;
    while (true)
    {
-      SphereResult* res;
+      SphereResult* res = NULL;
 
-      if (myproc.read(res) <= 0)
+      if (myproc->read(res) <= 0)
       {
-         if (myproc.checkProgress() < 0)
+         if (myproc->checkProgress() < 0)
          {
             cerr << "all SPEs failed\n";
             break;
          }
 
-         if (myproc.checkProgress() == 100)
+         if (myproc->checkProgress() == 100)
             break;
+      }
+      else
+      {
+         delete res;
       }
 
       gettimeofday(&t2, 0);
       if (t2.tv_sec - t1.tv_sec > 60)
       {
-         cout << "PROGRESS: " << myproc.checkProgress() << "%" << endl;
+         cout << "PROGRESS: " << myproc->checkProgress() << "%" << endl;
          t1 = t2;
       }
    }
@@ -93,8 +99,8 @@ int main(int argc, char** argv)
 
    SphereStream output;
    output.init(0);
-   myproc.setProcNumPerNode(2);
-   if (myproc.run(temp, output, "sort", 0, NULL, 0) < 0)
+   myproc->setProcNumPerNode(2);
+   if (myproc->run(temp, output, "sort", 0, NULL, 0) < 0)
    {
       cout << "failed to find any computing resources." << endl;
       return -1;
@@ -104,24 +110,28 @@ int main(int argc, char** argv)
    t2 = t1;
    while (true)
    {
-      SphereResult* res;
+      SphereResult* res = NULL;
 
-      if (myproc.read(res) <= 0)
+      if (myproc->read(res) <= 0)
       {
-         if (myproc.checkProgress() < 0)
+         if (myproc->checkProgress() < 0)
          {
             cerr << "all SPEs failed\n";
             break;
          }
 
-         if (myproc.checkProgress() == 100)
+         if (myproc->checkProgress() == 100)
             break;
+      }
+      else
+      {
+         delete res;
       }
 
       gettimeofday(&t2, 0);
       if (t2.tv_sec - t1.tv_sec > 60)
       {
-         cout << "PROGRESS: " << myproc.checkProgress() << "%" << endl;
+         cout << "PROGRESS: " << myproc->checkProgress() << "%" << endl;
          t1 = t2;
       }
    }
@@ -131,10 +141,11 @@ int main(int argc, char** argv)
 
    cout << "SPE COMPLETED " << endl;
 
-   myproc.close();
+   myproc->close();
+   client.releaseSphereProcess(myproc);
 
-   Sector::logout();
-   Sector::close();
+   client.logout();
+   client.close();
 
    return 0;
 }

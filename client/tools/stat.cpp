@@ -12,16 +12,18 @@ int main(int argc, char** argv)
       return -1;
    }
 
+   Sector client;
+
    Session s;
    s.loadInfo("../../conf/client.conf");
 
-   if (Sector::init(s.m_ClientConf.m_strMasterIP, s.m_ClientConf.m_iMasterPort) < 0)
+   if (client.init(s.m_ClientConf.m_strMasterIP, s.m_ClientConf.m_iMasterPort) < 0)
       return -1;
-   if (Sector::login(s.m_ClientConf.m_strUserName, s.m_ClientConf.m_strPassword, s.m_ClientConf.m_strCertificate.c_str()) < 0)
+   if (client.login(s.m_ClientConf.m_strUserName, s.m_ClientConf.m_strPassword, s.m_ClientConf.m_strCertificate.c_str()) < 0)
       return -1;
 
    SNode attr;
-   int r = Sector::stat(argv[1], attr);
+   int r = client.stat(argv[1], attr);
 
    if (r < 0)
    {
@@ -45,8 +47,8 @@ int main(int argc, char** argv)
       cout << endl;
    }
 
-   Sector::logout();
-   Sector::close();
+   client.logout();
+   client.close();
 
    return 1;
 }

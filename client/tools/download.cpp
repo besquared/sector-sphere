@@ -16,7 +16,7 @@
 
 using namespace std;
 
-int download(const char* file, const char* dest)
+int download(const char* file, const char* dest, Sector& client)
 {
    #ifndef WIN32
       timeval t1, t2;
@@ -31,7 +31,7 @@ int download(const char* file, const char* dest)
    #endif
 
    SNode attr;
-   if (Sector::stat(file, attr) < 0)
+   if (client.stat(file, attr) < 0)
    {
       cout << "ERROR: cannot locate file " << file << endl;
       return -1;
@@ -46,9 +46,9 @@ int download(const char* file, const char* dest)
    long long int size = attr.m_llSize;
    cout << "downloading " << file << " of " << size << " bytes" << endl;
 
-   SectorFile f;
+   SectorFile* f = client.createSectorFile();
 
-   if (f.open(file) < 0)
+   if (f->open(file) < 0)
    {
       cout << "unable to locate file" << endl;
       return -1;
@@ -67,10 +67,11 @@ int download(const char* file, const char* dest)
       localpath = string(dest) + string(file + sn + 1);
 
    bool finish = true;
-   if (f.download(localpath.c_str(), true) < 0)
+   if (f->download(localpath.c_str(), true) < 0)
       finish = false;
 
-   f.close();
+   f->close();
+   client.releaseSectorFile(f);
 
    if (finish)
    {
@@ -89,10 +90,10 @@ int download(const char* file, const char* dest)
    return -1;
 }
 
-int getFileList(const string& path, vector<string>& fl)
+int getFileList(const string& path, vector<string>& fl, Sector& client)
 {
    SNode attr;
-   if (Sector::stat(path.c_str(), attr) < 0)
+   if (client.stat(path.c_str(), attr) < 0)
       return -1;
 
    fl.push_back(path);
@@ -100,12 +101,12 @@ int getFileList(const string& path, vector<string>& fl)
    if (attr.m_bIsDir)
    {
       vector<SNode> subdir;
-      Sector::list(path, subdir);
+      client.list(path, subdir);
 
       for (vector<SNode>::iterator i = subdir.begin(); i != subdir.end(); ++ i)
       {
          if (i->m_bIsDir)
-            getFileList(path + "/" + i->m_strName, fl);
+            getFileList(path + "/" + i->m_strName, fl, client);
          else
             fl.push_back(path + "/" + i->m_strName);
       }
@@ -122,15 +123,17 @@ int main(int argc, char** argv)
       return -1;
    }
 
+   Sector client;
+
    Session s;
    s.loadInfo("../../conf/client.conf");
 
-   if (Sector::init(s.m_ClientConf.m_strMasterIP, s.m_ClientConf.m_iMasterPort) < 0)
+   if (client.init(s.m_ClientConf.m_strMasterIP, s.m_ClientConf.m_iMasterPort) < 0)
    {
       cout << "unable to connect to the server at " << argv[1] << endl;
       return -1;
    }
-   if (Sector::login(s.m_ClientConf.m_strUserName, s.m_ClientConf.m_strPassword, s.m_ClientConf.m_strCertificate.c_str()) < 0)
+   if (client.login(s.m_ClientConf.m_strUserName, s.m_ClientConf.m_strPassword, s.m_ClientConf.m_strCertificate.c_str()) < 0)
    {
       cout << "login failed\n";
       return -1;
@@ -142,12 +145,12 @@ int main(int argc, char** argv)
    if (!wc)
    {
       SNode attr;
-      if (Sector::stat(argv[1], attr) < 0)
+      if (client.stat(argv[1], attr) < 0)
       {
          cout << "ERROR: source file does not exist.\n";
          return -1;
       }
-      getFileList(argv[1], fl);
+      getFileList(argv[1], fl, client);
    }
    else
    {
@@ -163,14 +166,14 @@ int main(int argc, char** argv)
       }
 
       vector<SNode> filelist;
-      int r = Sector::list(path, filelist);
+      int r = client.list(path, filelist);
       if (r < 0)
          cout << "ERROR: " << r << " " << SectorError::getErrorMsg(r) << endl;
 
       for (vector<SNode>::iterator i = filelist.begin(); i != filelist.end(); ++ i)
       {
          if (WildCard::match(orig, i->m_strName))
-            getFileList(path + "/" + i->m_strName, fl);
+            getFileList(path + "/" + i->m_strName, fl, client);
       }
    }
 
@@ -235,11 +238,11 @@ int main(int argc, char** argv)
          }
       }
 
-      download(i->c_str(), localdir.c_str());
+      download(i->c_str(), localdir.c_str(), client);
    }
 
-   Sector::logout();
-   Sector::close();
+   client.logout();
+   client.close();
 
    return 1;
 }

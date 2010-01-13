@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright (c) 2005 - 2009, The Board of Trustees of the University of Illinois.
+Copyright (c) 2005 - 2010, The Board of Trustees of the University of Illinois.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 01/22/2009
+   Yunhong Gu, last updated 01/12/2010
 *****************************************************************************/
 
 
@@ -52,73 +52,88 @@ written by
 #include <routing.h>
 #include "fscache.h"
 
+class SectorFile;
+class SphereProcess;
+
 class Client
 {
+friend class SectorFile;
+friend class SphereProcess;
+
 public:
    Client();
-   virtual ~Client();
+   ~Client();
 
 public:
-   static int init(const std::string& server, const int& port);
-   static int login(const std::string& username, const std::string& password, const char* cert = NULL);
-   static int login(const std::string& serv_ip, const int& serv_port);
-   static int logout();
-   static int close();
+   int init(const std::string& server, const int& port);
+   int login(const std::string& username, const std::string& password, const char* cert = NULL);
+   int login(const std::string& serv_ip, const int& serv_port);
+   int logout();
+   int close();
 
-   static int list(const std::string& path, std::vector<SNode>& attr);
-   static int stat(const std::string& path, SNode& attr);
-   static int mkdir(const std::string& path);
-   static int move(const std::string& oldpath, const std::string& newpath);
-   static int remove(const std::string& path);
-   static int rmr(const std::string& path);
-   static int copy(const std::string& src, const std::string& dst);
-   static int utime(const std::string& path, const int64_t& ts);
+   int list(const std::string& path, std::vector<SNode>& attr);
+   int stat(const std::string& path, SNode& attr);
+   int mkdir(const std::string& path);
+   int move(const std::string& oldpath, const std::string& newpath);
+   int remove(const std::string& path);
+   int rmr(const std::string& path);
+   int copy(const std::string& src, const std::string& dst);
+   int utime(const std::string& path, const int64_t& ts);
 
-   static int sysinfo(SysStat& sys);
+   int sysinfo(SysStat& sys);
 
 public:
-   static int dataInfo(const std::vector<std::string>& files, std::vector<std::string>& info);
+   SectorFile* createSectorFile();
+   SphereProcess* createSphereProcess();
+   int releaseSectorFile(SectorFile* sf);
+   int releaseSphereProcess(SphereProcess* sp);
 
 protected:
-   static int updateMasters();
+   int updateMasters();
 
 protected:
-   static std::string g_strServerHost;		// original master server domain name
-   static std::string g_strServerIP;		// original master server IP address
-   static int g_iServerPort;			// original master server port
-   static CGMP g_GMP;				// GMP
-   static DataChn g_DataChn;			// data channel
-   static int32_t g_iKey;			// user key
+   std::string m_strServerHost;		// original master server domain name
+   std::string m_strServerIP;		// original master server IP address
+   int m_iServerPort;			// original master server port
+   CGMP m_GMP;				// GMP
+   DataChn m_DataChn;			// data channel
+   int32_t m_iKey;			// user key
 
    // this is the global key/iv for this client. do not share this for all connections; a new connection should duplicate this
-   static unsigned char g_pcCryptoKey[16];
-   static unsigned char g_pcCryptoIV[8];
+   unsigned char m_pcCryptoKey[16];
+   unsigned char m_pcCryptoIV[8];
 
-   static Topology g_Topology;			// slave system topology
+   Topology m_Topology;			// slave system topology
 
-   static SectorError g_ErrorInfo;		// error description
+   SectorError m_ErrorInfo;		// error description
 
-   static StatCache g_StatCache;		// cache for stat() call, used for updating file that is not reflected in the master system
+   StatCache m_StatCache;		// cache for stat() call, used for updating file that is not reflected in the master system
 
 private:
-   static int g_iCount;				// number of concurrent logins
+   int m_iCount;			// number of concurrent logins
 
 protected: // master routing
-   static Routing g_Routing;			// master routing module
+   Routing m_Routing;			// master routing module
 
 protected:
-   static std::string g_strUsername;		// user account name
-   static std::string g_strPassword;		// user password
-   static std::string g_strCert;		// master certificate
+   std::string m_strUsername;		// user account name
+   std::string m_strPassword;		// user password
+   std::string m_strCert;		// master certificate
 
-   static std::set<Address, AddrComp> g_sMasters;	// masters
+   std::set<Address, AddrComp> m_sMasters;	// masters
 
 protected: // the following are used for keeping alive with the masters
-   static bool g_bActive;
-   static pthread_t g_KeepAlive;
-   static pthread_cond_t g_KACond;
-   static pthread_mutex_t g_KALock;
+   bool m_bActive;
+   pthread_t m_KeepAlive;
+   pthread_cond_t m_KACond;
+   pthread_mutex_t m_KALock;
    static void* keepAlive(void*);
+
+protected:
+   pthread_mutex_t m_IDLock;
+   int m_iID;
+   std::map<int, SectorFile*> m_mFSList;
+   std::map<int, SphereProcess*> m_mDCList;
 };
 
 typedef Client Sector;

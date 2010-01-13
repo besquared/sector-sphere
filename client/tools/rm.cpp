@@ -21,12 +21,14 @@ int main(int argc, char** argv)
       return -1;
    }
 
+   Sector client;
+
    Session s;
    s.loadInfo("../../conf/client.conf");
 
-   if (Sector::init(s.m_ClientConf.m_strMasterIP, s.m_ClientConf.m_iMasterPort) < 0)
+   if (client.init(s.m_ClientConf.m_strMasterIP, s.m_ClientConf.m_iMasterPort) < 0)
       return -1;
-   if (Sector::login(s.m_ClientConf.m_strUserName, s.m_ClientConf.m_strPassword, s.m_ClientConf.m_strCertificate.c_str()) < 0)
+   if (client.login(s.m_ClientConf.m_strUserName, s.m_ClientConf.m_strPassword, s.m_ClientConf.m_strCertificate.c_str()) < 0)
       return -1;
 
    string path = argv[1];
@@ -34,12 +36,12 @@ int main(int argc, char** argv)
 
    if (!wc)
    {
-      int r = Sector::remove(path);
+      int r = client.remove(path);
 
       if (r == SectorError::E_NOEMPTY)
       {
          if (isRecursive(path))
-            Sector::rmr(path);
+            client.rmr(path);
       }
       else if (r < 0)
          cout << "ERROR: " << r << " " << SectorError::getErrorMsg(r) << endl;
@@ -57,7 +59,7 @@ int main(int argc, char** argv)
       }
 
       vector<SNode> filelist;
-      int r = Sector::list(path, filelist);
+      int r = client.list(path, filelist);
       if (r < 0)
          cout << "ERROR: " << r << " " << SectorError::getErrorMsg(r) << endl;
 
@@ -69,16 +71,16 @@ int main(int argc, char** argv)
          if (WildCard::match(orig, i->m_strName))
          {
             if (recursive)
-               Sector::rmr(path + "/" + i->m_strName);
+               client.rmr(path + "/" + i->m_strName);
             else
             {
-               r = Sector::remove(path + "/" + i->m_strName);
+               r = client.remove(path + "/" + i->m_strName);
 
                if (r == SectorError::E_NOEMPTY)
                {
                   recursive = isRecursive(path + "/" + i->m_strName);
                   if (recursive)
-                     Sector::rmr(path + "/" + i->m_strName);
+                     client.rmr(path + "/" + i->m_strName);
                }
                else if (r < 0)
                   cout << "ERROR: " << r << " " << SectorError::getErrorMsg(r) << endl;
@@ -87,8 +89,8 @@ int main(int argc, char** argv)
       }
    }
 
-   Sector::logout();
-   Sector::close();
+   client.logout();
+   client.close();
 
    return 1;
 }
