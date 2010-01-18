@@ -178,7 +178,7 @@ char* ConfParser::getToken(char* str, string& token)
 
 int MasterConf::init(const string& path)
 {
-   m_iServerPort = 2237;	// CBFS
+   m_iServerPort = 6000;
 
    ConfParser parser;
    Param param;
