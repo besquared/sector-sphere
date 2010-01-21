@@ -92,9 +92,19 @@ protected:
    int updateMasters();
 
 protected:
+   std::string m_strUsername;           // user account name
+   std::string m_strPassword;           // user password
+   std::string m_strCert;               // master certificate
+
+   std::set<Address, AddrComp> m_sMasters;      // masters
+
+   Routing m_Routing;                   // master routing module
+
    std::string m_strServerHost;		// original master server domain name
    std::string m_strServerIP;		// original master server IP address
    int m_iServerPort;			// original master server port
+
+protected:
    CGMP m_GMP;				// GMP
    DataChn m_DataChn;			// data channel
    int32_t m_iKey;			// user key
@@ -112,16 +122,6 @@ protected:
 private:
    int m_iCount;			// number of concurrent logins
 
-protected: // master routing
-   Routing m_Routing;			// master routing module
-
-protected:
-   std::string m_strUsername;		// user account name
-   std::string m_strPassword;		// user password
-   std::string m_strCert;		// master certificate
-
-   std::set<Address, AddrComp> m_sMasters;	// masters
-
 protected: // the following are used for keeping alive with the masters
    bool m_bActive;
    pthread_t m_KeepAlive;
@@ -131,9 +131,9 @@ protected: // the following are used for keeping alive with the masters
 
 protected:
    pthread_mutex_t m_IDLock;
-   int m_iID;
-   std::map<int, SectorFile*> m_mFSList;
-   std::map<int, SphereProcess*> m_mDCList;
+   int m_iID;					// seed of id for each file or process
+   std::map<int, SectorFile*> m_mFSList;	// list of open files
+   std::map<int, SphereProcess*> m_mDCList;	// list of active process
 };
 
 typedef Client Sector;

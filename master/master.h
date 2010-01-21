@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 01/03/2010
+   Yunhong Gu, last updated 01/19/2010
 *****************************************************************************/
 
 
@@ -100,6 +100,9 @@ private:
    int processFSCmd(const char* ip, const int port,  const ActiveUser* user, const int32_t key, int id, SectorMsg* msg);
    int processDCCmd(const char* ip, const int port,  const ActiveUser* user, const int32_t key, int id, SectorMsg* msg);
    int processMCmd(const char* ip, const int port,  const ActiveUser* user, const int32_t key, int id, SectorMsg* msg);
+
+   int sync(const char* fileinfo, const int& size, const int& type);
+   int processSyncCmd(const char* ip, const int port,  const ActiveUser* user, const int32_t key, int id, SectorMsg* msg);
 
 private:
    inline void reject(const char* ip, const int port, int id, int32_t code);

@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 01/08/2010
+   Yunhong Gu, last updated 01/20/2010
 *****************************************************************************/
 
 #include <common.h>
@@ -384,13 +384,6 @@ int Master::run()
            i->second.m_iRetryNum ++;
       }
 
-      if (m_Routing.getRouterID(m_iRouterKey) != 0)
-         continue;
-
-
-      // The following checks are only performed by the primary master
-
-
       // check each users, remove inactive ones
       vector<int> tbru;
 
@@ -427,6 +420,13 @@ int Master::run()
 
          m_mActiveUser.erase(*i);
       }
+
+
+      if (m_Routing.getRouterID(m_iRouterKey) != 0)
+         continue;
+
+      // The following checks are only performed by the primary master
+
 
       // check each slave node
       // if probe fails, remove the metadata about the data on the node, and create new replicas
@@ -496,18 +496,18 @@ int Master::run()
       {
          m_SlaveManager.remove(*i);
 
-            // send lost slave info to all existing masters
-            for (map<uint32_t, Address>::iterator m = m_Routing.m_mAddressList.begin(); m != m_Routing.m_mAddressList.end(); ++ m)
-            {
-               if (m->first == m_iRouterKey)
-                  continue;
+         // send lost slave info to all existing masters
+         for (map<uint32_t, Address>::iterator m = m_Routing.m_mAddressList.begin(); m != m_Routing.m_mAddressList.end(); ++ m)
+         {
+            if (m->first == m_iRouterKey)
+               continue;
 
-               SectorMsg msg;
-               msg.setKey(0);
-               msg.setType(1007);
-               msg.setData(0, (char*)&(*i), 4);
-               m_GMP.rpc(m->second.m_strIP.c_str(), m->second.m_iPort, &msg, &msg);
-            }
+            SectorMsg msg;
+            msg.setKey(0);
+            msg.setType(1007);
+            msg.setData(0, (char*)&(*i), 4);
+            m_GMP.rpc(m->second.m_strIP.c_str(), m->second.m_iPort, &msg, &msg);
+         }
       }
 
       // update cluster statistics
@@ -531,17 +531,12 @@ int Master::run()
 
       // check replica, create or remove replicas if necessary
       // only the first master is responsible for replica checking
-      if (m_Routing.getRouterID(m_iRouterKey) == 0)
-      {
-         pthread_mutex_lock(&m_ReplicaLock);
-         if (m_vstrToBeReplicated.empty())
-         {
-            m_pMetadata->getUnderReplicated("/", m_vstrToBeReplicated, m_SysConfig.m_iReplicaNum);
-         }
-         if (!m_vstrToBeReplicated.empty())
-            pthread_cond_signal(&m_ReplicaCond);
-         pthread_mutex_unlock(&m_ReplicaLock);
-      }
+      pthread_mutex_lock(&m_ReplicaLock);
+      if (m_vstrToBeReplicated.empty())
+         m_pMetadata->getUnderReplicated("/", m_vstrToBeReplicated, m_SysConfig.m_iReplicaNum);
+      if (!m_vstrToBeReplicated.empty())
+         pthread_cond_signal(&m_ReplicaCond);
+      pthread_mutex_unlock(&m_ReplicaLock);
    }
 
    return 0;
@@ -1061,6 +1056,10 @@ void* Master::process(void* s)
          self->processMCmd(ip, port, user, key, id, msg);
          break;
 
+      case 11:
+         self->processSyncCmd(ip, port, user, key, id, msg);
+         break;
+
       default:
          self->reject(ip, port, id, SectorError::E_UNKNOWN);
       }
@@ -1113,20 +1112,12 @@ int Master::processSysCmd(const char* ip, const int port, const ActiveUser* user
       }
 
       // send file changes to all other masters
-      for (map<uint32_t, Address>::iterator i = m_Routing.m_mAddressList.begin(); i != m_Routing.m_mAddressList.end(); ++ i)
-      {
-         if (i->first == m_iRouterKey)
-            continue;
-
-         SectorMsg newmsg;
-         newmsg.setKey(0);
-         newmsg.setType(1014);
-         newmsg.setData(0, (char*)&change, 4);
-         newmsg.setData(4, ip, 64);
-         newmsg.setData(68, (char*)&port, 4);
-         newmsg.setData(72, msg->getData() + 12, msg->m_iDataLength - 12);
-         m_GMP.rpc(i->second.m_strIP.c_str(), i->second.m_iPort, &newmsg, &newmsg);
-      }
+      SectorMsg newmsg;
+      newmsg.setData(0, (char*)&change, 4);
+      newmsg.setData(4, ip, 64);
+      newmsg.setData(68, (char*)&port, 4);
+      newmsg.setData(72, msg->getData() + 12, msg->m_iDataLength - 12);
+      sync(newmsg.getData(), newmsg.m_iDataLength, 1100);
 
       // unlock the file, if this is a file operation
       // update transaction status, if this is a file operation; if it is sphere, a final sphere report will be sent, see #4.
@@ -1255,7 +1246,7 @@ int Master::processSysCmd(const char* ip, const int port, const ActiveUser* user
       break;
    }
 
-   case 7: // unregister in-memoory objects
+   case 7: // unregister in-memory objects
    {
       int num = *(int32_t*)(msg->getData() + 8);
       int pos = 12;
@@ -1268,17 +1259,7 @@ int Master::processSysCmd(const char* ip, const int port, const ActiveUser* user
          m_pMetadata->remove(path.c_str());
 
          // erase this from all other masters
-         for (map<uint32_t, Address>::iterator i = m_Routing.m_mAddressList.begin(); i != m_Routing.m_mAddressList.end(); ++ i)
-         {
-            if (i->first == m_iRouterKey)
-               continue;
-
-            SectorMsg newmsg;
-            newmsg.setKey(0);
-            newmsg.setType(1012);
-            newmsg.setData(0, path.c_str(), path.length() + 1);
-            m_GMP.rpc(i->second.m_strIP.c_str(), i->second.m_iPort, &newmsg, &newmsg);
-         }
+         sync(path.c_str(), path.length() + 1, 1105);
       }
 
       msg->m_iDataLength = SectorMsg::m_iHdrSize;
@@ -1440,18 +1421,7 @@ int Master::processFSCmd(const char* ip, const int port,  const ActiveUser* user
       m_pMetadata->create(msg->getData(), true);
 
       // send file changes to all other masters
-      string path = msg->getData();
-      for (map<uint32_t, Address>::iterator i = m_Routing.m_mAddressList.begin(); i != m_Routing.m_mAddressList.end(); ++ i)
-      {
-         if (i->first == m_iRouterKey)
-            continue;
-
-         SectorMsg newmsg;
-         newmsg.setKey(0);
-         newmsg.setType(1011);
-         newmsg.setData(0, path.c_str(), path.length() + 1);
-         m_GMP.rpc(i->second.m_strIP.c_str(), i->second.m_iPort, &newmsg, &newmsg);
-      }
+      sync(msg->getData(), msg->m_iDataLength, 1103);
 
       m_GMP.sendto(ip, port, id, msg);
 
@@ -1531,30 +1501,19 @@ int Master::processFSCmd(const char* ip, const int port,  const ActiveUser* user
       }
 
       // send file changes to all other masters
-      string path = msg->getData();
-      for (map<uint32_t, Address>::iterator i = m_Routing.m_mAddressList.begin(); i != m_Routing.m_mAddressList.end(); ++ i)
+      SectorMsg newmsg;
+      newmsg.setData(0, (char*)&rt, 4);
+      newmsg.setData(4, src.c_str(), src.length() + 1);
+      int pos = 4 + src.length() + 1;
+      if (rt < 0)
       {
-         if (i->first == m_iRouterKey)
-            continue;
-
-         SectorMsg newmsg;
-         newmsg.setKey(0);
-         newmsg.setType(1013);
-         newmsg.setData(0, (char*)&rt, 4);
-         newmsg.setData(4, src.c_str(), src.length() + 1);
-         int pos = 4 + src.length() + 1;
-         if (rt < 0)
-         {
-            newmsg.setData(pos, uplevel.c_str(), uplevel.length() + 1);
-            pos += uplevel.length() + 1;
-            newmsg.setData(pos, newname.c_str(), newname.length() + 1);
-         }
-         else
-         {
-            newmsg.setData(pos, dst.c_str(), dst.length() + 1);
-         }
-         m_GMP.rpc(i->second.m_strIP.c_str(), i->second.m_iPort, &newmsg, &newmsg);
+         newmsg.setData(pos, uplevel.c_str(), uplevel.length() + 1);
+         pos += uplevel.length() + 1;
+         newmsg.setData(pos, newname.c_str(), newname.length() + 1);
       }
+      else
+         newmsg.setData(pos, dst.c_str(), dst.length() + 1);
+      sync(newmsg.getData(), newmsg.m_iDataLength, 1104);
 
       m_GMP.sendto(ip, port, id, msg);
 
@@ -1618,17 +1577,7 @@ int Master::processFSCmd(const char* ip, const int port,  const ActiveUser* user
       m_pMetadata->remove(filename.c_str(), true);
 
       // send file changes to all other masters
-      for (map<uint32_t, Address>::iterator i = m_Routing.m_mAddressList.begin(); i != m_Routing.m_mAddressList.end(); ++ i)
-      {
-         if (i->first == m_iRouterKey)
-            continue;
-
-         SectorMsg newmsg;
-         newmsg.setKey(0);
-         newmsg.setType(1012);
-         newmsg.setData(0, filename.c_str(), filename.length() + 1);
-         m_GMP.rpc(i->second.m_strIP.c_str(), i->second.m_iPort, &newmsg, &newmsg);
-      }
+      sync(filename.c_str(), filename.length() + 1, 1105);
 
       msg->m_iDataLength = SectorMsg::m_iHdrSize;
       m_GMP.sendto(ip, port, id, msg);
@@ -1744,23 +1693,16 @@ int Master::processFSCmd(const char* ip, const int port,  const ActiveUser* user
          m_GMP.sendto(i->m_strIP.c_str(), i->m_iPort, msgid, msg);
       }
 
-      m_pMetadata->utime(msg->getData(), *(int64_t*)(msg->getData() + strlen(msg->getData()) + 1));
-
-      // send file changes to all other masters
       string path = msg->getData();
       int64_t newts = *(int64_t*)(msg->getData() + strlen(msg->getData()) + 1);
-      for (map<uint32_t, Address>::iterator i = m_Routing.m_mAddressList.begin(); i != m_Routing.m_mAddressList.end(); ++ i)
-      {
-         if (i->first == m_iRouterKey)
-            continue;
 
-         SectorMsg newmsg;
-         newmsg.setKey(0);
-         newmsg.setType(1015);
-         newmsg.setData(0, (char*)&newts, 8);
-         newmsg.setData(8, path.c_str(), path.length() + 1);
-         m_GMP.rpc(i->second.m_strIP.c_str(), i->second.m_iPort, &newmsg, &newmsg);
-      }
+      m_pMetadata->utime(path, newts);
+
+      // send file changes to all other masters
+      SectorMsg newmsg;
+      newmsg.setData(0, (char*)&newts, 8);
+      newmsg.setData(8, path.c_str(), path.length() + 1);
+      sync(newmsg.getData(), newmsg.m_iDataLength, 1107);
 
       msg->m_iDataLength = SectorMsg::m_iHdrSize;
       m_GMP.sendto(ip, port, id, msg);
@@ -2117,47 +2059,38 @@ int Master::processMCmd(const char* ip, const int port,  const ActiveUser* user,
       break;
    }
 
-   case 1011: // mkdir
-   {
-      m_pMetadata->create(msg->getData(), true);
-
-      msg->m_iDataLength = SectorMsg::m_iHdrSize + 4;
-      m_GMP.sendto(ip, port, id, msg);
-      break;
+   default:
+      reject(ip, port, id, SectorError::E_UNKNOWN);
+      return -1;
    }
 
-   case 1012: // delete
-   {
-      m_pMetadata->remove(msg->getData(), true);
+   return 0;
+}
 
-      msg->m_iDataLength = SectorMsg::m_iHdrSize + 4;
-      m_GMP.sendto(ip, port, id, msg);
-      break;
+int Master::sync(const char* fileinfo, const int& size, const int& type)
+{
+   SectorMsg msg;
+   msg.setKey(0);
+   msg.setType(type);
+   msg.setData(0, fileinfo, size);
+
+   // send file changes to all other masters
+   for (map<uint32_t, Address>::iterator i = m_Routing.m_mAddressList.begin(); i != m_Routing.m_mAddressList.end(); ++ i)
+   {
+      if (i->first == m_iRouterKey)
+         continue;
+
+      m_GMP.rpc(i->second.m_strIP.c_str(), i->second.m_iPort, &msg, &msg);
    }
 
-   case 1013: // mv
+   return 0;
+}
+
+int Master::processSyncCmd(const char* ip, const int port,  const ActiveUser* user, const int32_t key, int id, SectorMsg* msg)
+{
+   switch (msg->getType())
    {
-      int rt = *(int32_t*)msg->getData();
-      string src = msg->getData() + 4;
-
-      if (rt < 0)
-      {
-         string uplevel = msg->getData() + 4 + src.length() + 1;
-         string newname = msg->getData() + 4 + src.length() + 1 + uplevel.length() + 1;
-         m_pMetadata->move(src.c_str(), uplevel.c_str(), newname.c_str());
-      }
-      else
-      {
-         string dst = msg->getData() + 4 + src.length() + 1;
-         m_pMetadata->move(src.c_str(), dst.c_str());
-      }
-
-      msg->m_iDataLength = SectorMsg::m_iHdrSize + 4;
-      m_GMP.sendto(ip, port, id, msg);
-      break;
-   }
-
-   case 1014: // file change
+   case 1100: // file change
    {
       int change = *(int32_t*)msg->getData();
       Address addr;
@@ -2180,7 +2113,47 @@ int Master::processMCmd(const char* ip, const int port,  const ActiveUser* user,
       break;
    }
 
-   case 1015: // utime
+   case 1103: // mkdir
+   {
+      m_pMetadata->create(msg->getData(), true);
+
+      msg->m_iDataLength = SectorMsg::m_iHdrSize + 4;
+      m_GMP.sendto(ip, port, id, msg);
+      break;
+   }
+
+   case 1104: // mv
+   {
+      int rt = *(int32_t*)msg->getData();
+      string src = msg->getData() + 4;
+
+      if (rt < 0)
+      {
+         string uplevel = msg->getData() + 4 + src.length() + 1;
+         string newname = msg->getData() + 4 + src.length() + 1 + uplevel.length() + 1;
+         m_pMetadata->move(src.c_str(), uplevel.c_str(), newname.c_str());
+      }
+      else
+      {
+         string dst = msg->getData() + 4 + src.length() + 1;
+         m_pMetadata->move(src.c_str(), dst.c_str());
+      }
+
+      msg->m_iDataLength = SectorMsg::m_iHdrSize + 4;
+      m_GMP.sendto(ip, port, id, msg);
+      break;
+   }
+
+   case 1105: // delete
+   {
+      m_pMetadata->remove(msg->getData(), true);
+
+      msg->m_iDataLength = SectorMsg::m_iHdrSize + 4;
+      m_GMP.sendto(ip, port, id, msg);
+      break;
+   }
+
+   case 1107: // utime
    {
       m_pMetadata->utime(msg->getData() + 8, *(int64_t*)msg->getData());
       msg->m_iDataLength = SectorMsg::m_iHdrSize + 4;

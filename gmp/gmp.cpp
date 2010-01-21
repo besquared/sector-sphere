@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 01/01/2010
+   Yunhong Gu, last updated 01/16/2010
 *****************************************************************************/
 
 
@@ -224,8 +224,8 @@ int CGMP::init(const int& port)
    }
 
    timeval tv;
-   tv.tv_sec = 1;
-   tv.tv_usec = 0;
+   tv.tv_sec = 0;
+   tv.tv_usec = 10000;
    setsockopt(m_UDPSocket, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv, sizeof(timeval));
 
    #ifndef WIN32
@@ -250,7 +250,11 @@ int CGMP::close()
 
    m_bClosed = true;
 
+   m_UDTSocket.close();
+
    #ifndef WIN32
+      ::close(m_UDPSocket);
+
       pthread_mutex_lock(&m_SndQueueLock);
       pthread_cond_signal(&m_SndQueueCond);
       pthread_mutex_unlock(&m_SndQueueLock);
@@ -259,18 +263,13 @@ int CGMP::close()
       pthread_join(m_RcvThread, NULL);
       pthread_join(m_UDTRcvThread, NULL);
    #else
+      ::closesocket(m_UDPSocket);
+
       SetEvent(m_SndQueueCond);
       WaitForSingleObject(m_SndThread, INFINITE);
       WaitForSingleObject(m_RcvThread, INFINITE);
       WaitForSingleObject(m_UDTRcvThread, INFINITE);
    #endif
-
-   #ifndef WIN32
-      ::close(m_UDPSocket);
-   #else
-      ::closesocket(m_UDPSocket);
-   #endif
-   m_UDTSocket.close();
 
    #ifdef WIN32
       WSACleanup();

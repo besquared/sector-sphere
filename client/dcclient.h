@@ -64,7 +64,7 @@ public:
    std::vector<int64_t> m_vSize;	// size per file
    std::vector<int64_t> m_vRecNum;	// number of record per file
 
-   std::vector< std::set<Address, AddrComp> > m_vLocation;            // locations for each file
+   std::vector< std::set<Address, AddrComp> > m_vLocation;	// locations for each file
 
    int m_iFileNum;			// number of files
    int64_t m_llSize;			// total data size
@@ -72,7 +72,7 @@ public:
    int64_t m_llStart;			// start point (record)
    int64_t m_llEnd;			// end point (record), -1 means the last record
 
-   std::vector<std::string> m_vOrigInput;	// original input files or dirs, need SphereStream::prepareInput to further process
+   std::vector<std::string> m_vOrigInput;			// original input files or dirs, need SphereStream::prepareInput to further process
 
    int m_iStatus;			// 0: uninitialized, 1: initialized, -1: bad
 };
@@ -230,8 +230,8 @@ private:
    int readResult(SPE* s);
 
 private:
-   Client* m_pClient;
-   int m_iID;
+   Client* m_pClient;				// pointer to the sector client
+   int m_iID;					// unique instance id
 };
 
 #endif
