@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 01/04/2010
+   Yunhong Gu, last updated 01/27/2010
 *****************************************************************************/
 
 #include <slave.h>
@@ -147,7 +147,8 @@ SPEDestination::SPEDestination():
 m_piSArray(NULL),
 m_piRArray(NULL),
 m_iLocNum(0),
-m_pcOutputLoc(NULL)
+m_pcOutputLoc(NULL),
+m_piLocID(NULL)
 {
 }
 
@@ -156,6 +157,7 @@ SPEDestination::~SPEDestination()
    delete [] m_piSArray;
    delete [] m_piRArray;
    delete [] m_pcOutputLoc;
+   delete [] m_piLocID;
 }
 
 void SPEDestination::init(const int& buckets)
@@ -226,6 +228,9 @@ void* Slave::SPEHandler(void* p)
          return NULL;
       int len = dest.m_iLocNum * 80;
       if (self->m_DataChn.recv(ip, dataport, transid, dest.m_pcOutputLoc, len) < 0)
+         return NULL;
+      len = buckets * 4;
+      if (self->m_DataChn.recv(ip, dataport, transid, (char*&)dest.m_piLocID, len) < 0)
          return NULL;
    }
    else if (buckets < 0)
@@ -1001,7 +1006,7 @@ int Slave::sendResultToBuckets(const int& speid, const int& buckets, const SPERe
 
    for (int r = 0; r < buckets; ++ r)
    {
-      int i = r % dest.m_iLocNum;
+      int i = dest.m_piLocID[r];
       if (0 != result.m_vDataLen[r])
       {
          ResByLoc[i].insert(r);

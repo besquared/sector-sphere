@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 01/12/2010
+   Yunhong Gu, last updated 01/27/2010
 *****************************************************************************/
 
 #include "dcclient.h"
@@ -68,6 +68,7 @@ int Client::releaseSphereProcess(SphereProcess* sp)
 }
 
 SphereStream::SphereStream():
+m_piLocID(NULL),
 m_iFileNum(0),
 m_llSize(0),
 m_llRecNum(0),
@@ -83,7 +84,7 @@ m_iStatus(0)
 
 SphereStream::~SphereStream()
 {
-
+   delete [] m_piLocID;
 }
 
 int SphereStream::init(const vector<string>& files)
@@ -108,6 +109,8 @@ int SphereStream::init(const int& num)
    m_vFiles.resize(num);
    m_vSize.resize(num);
    m_vRecNum.resize(num);
+
+   m_piLocID = new int32_t[num];
 
    for (vector<string>::iterator i = m_vFiles.begin(); i != m_vFiles.end(); ++ i)
       *i = "";
@@ -253,9 +256,6 @@ int SphereProcess::run(const SphereStream& input, SphereStream& output, const st
    pthread_mutex_lock(&m_RunLock);
    pthread_mutex_unlock(&m_RunLock);
 
-   if (input.m_llSize <= 0)
-      return 0;
-
    m_iProcType = type;
    m_strOperator = op;
    m_pcParam = new char[size];
@@ -274,7 +274,11 @@ int SphereProcess::run(const SphereStream& input, SphereStream& output, const st
    m_mBucket.clear();
    m_mSPE.clear();
 
-   cout << "JOB " << input.m_llSize << " " << input.m_llRecNum << endl;
+   prepareInput();
+   if (m_pInput->m_llSize <= 0)
+      return 0;
+
+   cout << "JOB " << m_pInput->m_llSize << " " << m_pInput->m_llRecNum << endl;
 
    SectorMsg msg;
    msg.setType(202); // locate available SPE
@@ -815,30 +819,30 @@ int SphereProcess::dataInfo(const vector<string>& files, vector<string>& info)
 }
 
 
-int SphereProcess::prepareInput(SphereStream& ss)
+int SphereProcess::prepareInput()
 {
-   if ((ss.m_iStatus != 0) || ss.m_vOrigInput.empty())
+   if ((m_pInput->m_iStatus != 0) || m_pInput->m_vOrigInput.empty())
       return -1;
 
    vector<string> datainfo;
-   int res = dataInfo(ss.m_vOrigInput, datainfo);
+   int res = dataInfo(m_pInput->m_vOrigInput, datainfo);
    if (res < 0)
       return res;
 
-   ss.m_iFileNum = datainfo.size();
-   if (0 == ss.m_iFileNum)
+   m_pInput->m_iFileNum = datainfo.size();
+   if (0 == m_pInput->m_iFileNum)
       return 0;
 
-   ss.m_iStatus = -1;
+   m_pInput->m_iStatus = -1;
 
-   ss.m_vFiles.resize(ss.m_iFileNum);
-   ss.m_vSize.resize(ss.m_iFileNum);
-   ss.m_vRecNum.resize(ss.m_iFileNum);
-   ss.m_vLocation.resize(ss.m_iFileNum);
-   vector<string>::iterator f = ss.m_vFiles.begin();
-   vector<int64_t>::iterator s = ss.m_vSize.begin();
-   vector<int64_t>::iterator r = ss.m_vRecNum.begin();
-   vector< set<Address, AddrComp> >::iterator a = ss.m_vLocation.begin();
+   m_pInput->m_vFiles.resize(m_pInput->m_iFileNum);
+   m_pInput->m_vSize.resize(m_pInput->m_iFileNum);
+   m_pInput->m_vRecNum.resize(m_pInput->m_iFileNum);
+   m_pInput->m_vLocation.resize(m_pInput->m_iFileNum);
+   vector<string>::iterator f = m_pInput->m_vFiles.begin();
+   vector<int64_t>::iterator s = m_pInput->m_vSize.begin();
+   vector<int64_t>::iterator r = m_pInput->m_vRecNum.begin();
+   vector< set<Address, AddrComp> >::iterator a = m_pInput->m_vLocation.begin();
 
    bool indexfound = true;
 
@@ -862,7 +866,7 @@ int SphereProcess::prepareInput(SphereStream& ss)
       *f = p;
       p = p + strlen(p) + 1;
       *s = atoll(p);
-      ss.m_llSize += *s;
+      m_pInput->m_llSize += *s;
       p = p + strlen(p) + 1;
       *r = atoi(p);
       p = p + strlen(p) + 1;
@@ -870,12 +874,12 @@ int SphereProcess::prepareInput(SphereStream& ss)
       if (*r == -1)
       {
          // no record index found
-         ss.m_llRecNum = -1;
+         m_pInput->m_llRecNum = -1;
          indexfound = false;
       }
       else if (indexfound)
       {
-         ss.m_llRecNum += *r;
+         m_pInput->m_llRecNum += *r;
       }
 
       // retrieve all the locations
@@ -901,10 +905,10 @@ int SphereProcess::prepareInput(SphereStream& ss)
       a ++;
    }
 
-   ss.m_llEnd = ss.m_llRecNum;
+   m_pInput->m_llEnd = m_pInput->m_llRecNum;
 
-   ss.m_iStatus = 1;
-   return ss.m_iFileNum;
+   m_pInput->m_iStatus = 1;
+   return m_pInput->m_iFileNum;
 }
 
 int SphereProcess::prepareSPE(const char* spenodes)
@@ -972,6 +976,7 @@ int SphereProcess::connectSPE(SPE& s)
       int bnum = m_mBucket.size();
       m_pClient->m_DataChn.send(s.m_strIP, s.m_iDataPort, s.m_iSession, (char*)&bnum, 4);
       m_pClient->m_DataChn.send(s.m_strIP, s.m_iDataPort, s.m_iSession, m_pOutputLoc, bnum * 80);
+      m_pClient->m_DataChn.send(s.m_strIP, s.m_iDataPort, s.m_iSession, (char*)m_pOutput->m_piLocID, m_iOutputType * 4);
    }
    else if (m_iOutputType < 0)
       m_pClient->m_DataChn.send(s.m_strIP, s.m_iDataPort, s.m_iSession, m_pOutputLoc, strlen(m_pOutputLoc) + 1);
@@ -1144,6 +1149,18 @@ int SphereProcess::prepareOutput(const char* spenodes)
       if (m_mBucket.empty())
          return -1;
 
+      m_pOutputLoc = new char[m_mBucket.size() * 80];
+      int l = 0;
+      for (map<int, BUCKET>::iterator b = m_mBucket.begin(); b != m_mBucket.end(); ++ b)
+      {
+         strcpy(m_pOutputLoc + l * 80, b->second.m_strIP.c_str());
+         *(int32_t*)(m_pOutputLoc + l * 80 + 64) = b->second.m_iPort;
+         *(int32_t*)(m_pOutputLoc + l * 80 + 68) = b->second.m_iDataPort;
+         *(int32_t*)(m_pOutputLoc + l * 80 + 72) = b->second.m_iShufflerPort;
+         *(int32_t*)(m_pOutputLoc + l * 80 + 76) = b->second.m_iSession;
+         ++ l;
+      }
+
       // result locations
       map<int, BUCKET>::iterator b = m_mBucket.begin();
       for (int i = 0; i < m_pOutput->m_iFileNum; ++ i)
@@ -1153,26 +1170,46 @@ int SphereProcess::prepareOutput(const char* spenodes)
          m_pOutput->m_vFiles[i] = tmp;
          delete [] tmp;
 
-         Address loc;
-         loc.m_strIP = b->second.m_strIP;
-         loc.m_iPort = b->second.m_iPort;
-         m_pOutput->m_vLocation[i].insert(loc);
+         if (m_pOutput->m_vLocation[i].empty())
+         {
+            // if user didn't specify output location, simply pick the next bucket location and rotate
+            // this should be the normal case
+            Address loc;
+            loc.m_strIP = b->second.m_strIP;
+            loc.m_iPort = b->second.m_iPort;
+            m_pOutput->m_vLocation[i].insert(loc);
+            m_pOutput->m_piLocID[i] = b->first;
+         }
+         else
+         {
+            // otherwise find if the user-sepcified location is available
+            map<int, BUCKET>::iterator p = m_mBucket.begin();
+            for (; p != m_mBucket.end(); ++ p)
+            {
+               if ((p->second.m_strIP == m_pOutput->m_vLocation[i].begin()->m_strIP) && (p->second.m_iPort == m_pOutput->m_vLocation[i].begin()->m_iPort))
+                 break;
+            }
+
+            if (p == m_mBucket.end())
+            {
+               Address loc;
+               loc.m_strIP = b->second.m_strIP;
+               loc.m_iPort = b->second.m_iPort;
+               m_pOutput->m_vLocation[i].insert(loc);
+               m_pOutput->m_piLocID[i] = b->first;
+            }
+            else
+            {
+               Address loc;
+               loc.m_strIP = p->second.m_strIP;
+               loc.m_iPort = p->second.m_iPort;
+               m_pOutput->m_vLocation[i].insert(loc);
+               m_pOutput->m_piLocID[i] = p->first;
+            }
+         }
 
          if (++ b == m_mBucket.end())
             b = m_mBucket.begin();
-      }
-
-      // bucket locations: result will be sent to bucket_id % m_mBucket.size()
-      m_pOutputLoc = new char[m_mBucket.size() * 80];
-      int l = 0;
-      for (b = m_mBucket.begin(); b != m_mBucket.end(); ++ b)
-      {
-         strcpy(m_pOutputLoc + l * 80, b->second.m_strIP.c_str());
-         *(int32_t*)(m_pOutputLoc + l * 80 + 64) = b->second.m_iPort;
-         *(int32_t*)(m_pOutputLoc + l * 80 + 68) = b->second.m_iDataPort;
-         *(int32_t*)(m_pOutputLoc + l * 80 + 72) = b->second.m_iShufflerPort;
-         *(int32_t*)(m_pOutputLoc + l * 80 + 76) = b->second.m_iSession;
-         ++ l;
       }
    }
    else if (m_iOutputType < 0)

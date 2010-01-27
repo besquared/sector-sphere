@@ -42,16 +42,6 @@ int gen_idx(const SInput* input, SOutput* output, SFile* file)
    output->m_iRows = 0;
    file->m_sstrFiles.insert(input->m_pcUnit + string(".idx"));
 
-
-   ////////////
-   char* block = (char*)file->m_pInMemoryObjects->retrieve("/memory/mystuff");
-   cout << "HAHAHAHAHA " << block[0] << endl;
-   delete [] block;
-   file->m_pInMemoryObjects->remove("/memory/mystuff");
-
-   file->m_sstrFiles.insert("/memory/mystuff");
-
-
    return 0;
 }
 

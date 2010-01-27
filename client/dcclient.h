@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 01/12/2010
+   Yunhong Gu, last updated 01/27/2010
 *****************************************************************************/
 
 #ifndef __SPHERE_CLIENT_H__
@@ -45,6 +45,8 @@ written by
 
 class SphereStream
 {
+friend class SphereProcess;
+
 public:
    SphereStream();
    ~SphereStream();
@@ -56,7 +58,7 @@ public:
    void setOutputPath(const std::string& path, const std::string& name);
    void setOutputLoc(const unsigned int& bucket, const Address& addr);
 
-public:
+private:
    std::string m_strPath;		// path for output files
    std::string m_strName;		// name prefix for output files
 
@@ -65,6 +67,7 @@ public:
    std::vector<int64_t> m_vRecNum;	// number of record per file
 
    std::vector< std::set<Address, AddrComp> > m_vLocation;	// locations for each file
+   int32_t* m_piLocID;			// for output bucket
 
    int m_iFileNum;			// number of files
    int64_t m_llSize;			// total data size
@@ -214,7 +217,7 @@ private:
 
 private:
    int dataInfo(const std::vector<std::string>& files, std::vector<std::string>& info);
-   int prepareInput(SphereStream& ss);
+   int prepareInput();
    int prepareSPE(const char* spenodes);
    int segmentData();
    int prepareOutput(const char* spenodes);
