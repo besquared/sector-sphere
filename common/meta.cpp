@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright (c) 2005 - 2009, The Board of Trustees of the University of Illinois.
+Copyright (c) 2005 - 2010, The Board of Trustees of the University of Illinois.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 12/11/2009
+   Yunhong Gu, last updated 01/27/2010
 *****************************************************************************/
 
 #include <common.h>
@@ -58,19 +58,18 @@ int Metadata::lock(const string& path, int user, int mode)
 {
    CGuard mg(m_MetaLock);
 
-   if (mode == 1)
-   {
-      m_mLock[path].m_sReadLock.insert(user);
-   }
-   else if (mode == 2)
+   if (mode & SF_MODE::WRITE)
    {
       if (!m_mLock[path].m_sWriteLock.empty())
          return -1;
 
       m_mLock[path].m_sWriteLock.insert(user);
    }
-   else
-      return -1;
+
+   if (mode & SF_MODE::READ)
+   {
+      m_mLock[path].m_sReadLock.insert(user);
+   }
 
    return 0;
 }
@@ -84,16 +83,15 @@ int Metadata::unlock(const string& path, int user, int mode)
    if (i == m_mLock.end())
       return -1;
 
-   if (mode == 1)
-   {
-      i->second.m_sReadLock.erase(user);;
-   }
-   else if (mode == 2)
+   if (mode & SF_MODE::WRITE)
    {
       i->second.m_sWriteLock.erase(user);
    }
-   else
-      return -1;
+
+   if (mode & SF_MODE::READ)
+   {
+      i->second.m_sReadLock.erase(user);;
+   }
 
    if (i->second.m_sReadLock.empty() && i->second.m_sWriteLock.empty())
       m_mLock.erase(i);

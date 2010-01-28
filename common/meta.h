@@ -49,7 +49,7 @@ written by
 #include <fstream>
 #include <topology.h>
 #include <snode.h>
-
+#include <constant.h>
 
 class Metadata
 {

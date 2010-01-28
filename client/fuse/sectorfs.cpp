@@ -9,7 +9,6 @@ Sector SectorFS::g_SectorClient;
 Session SectorFS::g_SectorConfig;
 map<string, FileTracker*> SectorFS::m_mOpenFileList;
 pthread_mutex_t SectorFS::m_OpenFileLock = PTHREAD_MUTEX_INITIALIZER;
-bool SectorFS::g_bRunning = false;
 
 void* SectorFS::init(struct fuse_conn_info *conn)
 {
@@ -18,18 +17,11 @@ void* SectorFS::init(struct fuse_conn_info *conn)
    if (g_SectorClient.login(g_SectorConfig.m_ClientConf.m_strUserName, g_SectorConfig.m_ClientConf.m_strPassword, g_SectorConfig.m_ClientConf.m_strCertificate.c_str()) < 0)
       return NULL;
 
-   g_bRunning = true;
-   pthread_t heartbeat;
-   pthread_create(&heartbeat, NULL, HeartBeat, NULL);
-   pthread_detach(heartbeat);
-
    return NULL;
 }
 
 void SectorFS::destroy(void *)
 {
-   g_bRunning = false;
-
    g_SectorClient.logout();
    g_SectorClient.close();
 }
@@ -195,11 +187,12 @@ int SectorFS::chown(const char *, uid_t, gid_t)
 
 int SectorFS::create(const char* path, mode_t, struct fuse_file_info* info)
 {
-   SectorFile f;
-   int r = f.open(path, SF_MODE::WRITE);
+   SectorFile* f = g_SectorClient.createSectorFile();
+   int r = f->open(path, SF_MODE::WRITE);
    if (r < 0)
       return translateErr(r);
-   f.close();
+   f->close();
+   g_SectorClient.releaseSectorFile(f);
 
    return open(path, info);
 }
@@ -229,7 +222,7 @@ int SectorFS::open(const char* path, struct fuse_file_info* fi)
    int r = f->open(path, SF_MODE::READ | SF_MODE::WRITE);
    if (r < 0)
    {
-      g_SectorClient.releaseSectorFile(r);
+      g_SectorClient.releaseSectorFile(f);
       pthread_mutex_unlock(&m_OpenFileLock);
       return translateErr(r);
    }
@@ -308,7 +301,6 @@ int SectorFS::release(const char* path, struct fuse_file_info* info)
    t->second->m_pHandle->close();
    g_SectorClient.releaseSectorFile(t->second->m_pHandle);
    delete t->second;
-
    m_mOpenFileList.erase(t);
 
    pthread_mutex_unlock(&m_OpenFileLock);
@@ -340,17 +332,4 @@ int SectorFS::translateErr(int sferr)
    }
 
    return -1;
-}
-
-void* SectorFS::HeartBeat(void*)
-{
-   while (g_bRunning)
-   {
-      SNode attr;
-      g_SectorClient.stat("/", attr);
-
-      sleep(60);
-   }
-
-   return NULL;
 }

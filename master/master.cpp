@@ -480,7 +480,7 @@ int Master::run()
             {
                Transaction tt;
                m_TransManager.retrieve(*t, tt);
-               m_pMetadata->unlock(tt.m_strFile.c_str(), 0, tt.m_iMode);
+               m_pMetadata->unlock(tt.m_strFile.c_str(), tt.m_iUserKey, tt.m_iMode);
                m_TransManager.updateSlave(*t, i->first);
             }
 
@@ -1123,7 +1123,7 @@ int Master::processSysCmd(const char* ip, const int port, const ActiveUser* user
       // update transaction status, if this is a file operation; if it is sphere, a final sphere report will be sent, see #4.
       if (t.m_iType == 0)
       {
-         m_pMetadata->unlock(t.m_strFile.c_str(), key, t.m_iMode);
+         m_pMetadata->unlock(t.m_strFile.c_str(), t.m_iUserKey, t.m_iMode);
          m_TransManager.updateSlave(transid, slaveid);
       }
 
@@ -1768,8 +1768,6 @@ int Master::processFSCmd(const char* ip, const int port,  const ActiveUser* user
       }
       else
       {
-         m_SlaveManager.chooseIONode(attr.m_sLocation, hint, mode, addr, m_SysConfig.m_iReplicaNum);
-
          r = m_pMetadata->lock(path.c_str(), key, rwx);
          if (r < 0)
          {
@@ -1777,6 +1775,8 @@ int Master::processFSCmd(const char* ip, const int port,  const ActiveUser* user
             //m_SectorLog.logUserActivity(user->m_strName.c_str(), ip, "open", path.c_str(), "REJECT", "");
             break;
          }
+
+         m_SlaveManager.chooseIONode(attr.m_sLocation, hint, mode, addr, m_SysConfig.m_iReplicaNum);
       }
 
       int transid = m_TransManager.create(0, key, msg->getType(), path, mode);

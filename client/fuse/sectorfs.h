@@ -82,10 +82,6 @@ private:
 
 private:
    static int translateErr(int sferr);
-
-private:
-   static bool g_bRunning;
-   static void* HeartBeat(void*);
 };
 
 #endif
