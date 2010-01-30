@@ -1,5 +1,5 @@
 C++ = g++
-CCFLAGS = -I../../common -shared -fPIC -O3 -g
+CCFLAGS = -I../../include -shared -fPIC -O3 -g
 
 all: streamhash.so
 

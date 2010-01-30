@@ -43,72 +43,15 @@ written by
 
 #include "client.h"
 
-class SphereStream
-{
-friend class SphereProcess;
 
-public:
-   SphereStream();
-   ~SphereStream();
-
-public:
-   int init(const std::vector<std::string>& files);
-
-   int init(const int& num);
-   void setOutputPath(const std::string& path, const std::string& name);
-   void setOutputLoc(const unsigned int& bucket, const Address& addr);
-
-private:
-   std::string m_strPath;		// path for output files
-   std::string m_strName;		// name prefix for output files
-
-   std::vector<std::string> m_vFiles;	// list of files
-   std::vector<int64_t> m_vSize;	// size per file
-   std::vector<int64_t> m_vRecNum;	// number of record per file
-
-   std::vector< std::set<Address, AddrComp> > m_vLocation;	// locations for each file
-   int32_t* m_piLocID;			// for output bucket
-
-   int m_iFileNum;			// number of files
-   int64_t m_llSize;			// total data size
-   int64_t m_llRecNum;			// total number of records
-   int64_t m_llStart;			// start point (record)
-   int64_t m_llEnd;			// end point (record), -1 means the last record
-
-   std::vector<std::string> m_vOrigInput;			// original input files or dirs, need SphereStream::prepareInput to further process
-
-   int m_iStatus;			// 0: uninitialized, 1: initialized, -1: bad
-};
-
-class SphereResult
-{
-public:
-   SphereResult();
-   ~SphereResult();
-
-public:
-   int m_iResID;		// result ID
-
-   int m_iStatus;		// if this DS is processed successfully (> 0, number of rows). If not (<0), m_pcData may contain error msg
-
-   char* m_pcData;		// result data
-   int m_iDataLen;		// result data length
-   int64_t* m_pllIndex;		// result data index
-   int m_iIndexLen;		// result data index length
-
-   std::string m_strOrigFile;	// original input file
-   int64_t m_llOrigStartRec;	// first record of the original input file
-   int64_t m_llOrigEndRec;	// last record of the original input file
-};
-
-class SphereProcess
+class DCClient
 {
 friend class Client;
 
 private:
-   SphereProcess();
-   ~SphereProcess();
-   const SphereProcess& operator=(const SphereProcess&) {return *this;}
+   DCClient();
+   ~DCClient();
+   const DCClient& operator=(const DCClient&) {return *this;}
 
 public:
    int close();

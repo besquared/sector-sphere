@@ -45,9 +45,9 @@ written by
 
 using namespace std;
 
-SectorFile* Client::createSectorFile()
+FSClient* Client::createFSClient()
 {
-   SectorFile* sf = new SectorFile;
+   FSClient* sf = new FSClient;
    sf->m_pClient = this;
    pthread_mutex_lock(&m_IDLock);
    sf->m_iID = m_iID ++;
@@ -57,7 +57,7 @@ SectorFile* Client::createSectorFile()
    return sf;
 }
 
-int Client::releaseSectorFile(SectorFile* sf)
+int Client::releaseFSClient(FSClient* sf)
 {
    pthread_mutex_lock(&m_IDLock);
    m_mFSList.erase(sf->m_iID);
@@ -68,7 +68,7 @@ int Client::releaseSectorFile(SectorFile* sf)
 }
 
 
-SectorFile::SectorFile():
+FSClient::FSClient():
 m_iSession(),
 m_strSlaveIP(),
 m_iSlaveDataPort(),
@@ -85,13 +85,13 @@ m_pcLocalPath(NULL)
    pthread_mutex_init(&m_FileLock, NULL);
 }
 
-SectorFile::~SectorFile()
+FSClient::~FSClient()
 {
    delete [] m_pcLocalPath;
    pthread_mutex_destroy(&m_FileLock);
 }
 
-int SectorFile::open(const string& filename, int mode, const string& hint)
+int FSClient::open(const string& filename, int mode, const string& hint)
 {
    m_strFileName = Metadata::revisePath(filename);
 
@@ -161,7 +161,7 @@ int SectorFile::open(const string& filename, int mode, const string& hint)
    return 0;
 }
 
-int64_t SectorFile::read(char* buf, const int64_t& size)
+int64_t FSClient::read(char* buf, const int64_t& size)
 {
    CGuard fg(m_FileLock);
 
@@ -205,7 +205,7 @@ int64_t SectorFile::read(char* buf, const int64_t& size)
    return recvsize;
 }
 
-int64_t SectorFile::write(const char* buf, const int64_t& size)
+int64_t FSClient::write(const char* buf, const int64_t& size)
 {
    CGuard fg(m_FileLock);
 
@@ -239,7 +239,7 @@ int64_t SectorFile::write(const char* buf, const int64_t& size)
    return sentsize;
 }
 
-int SectorFile::download(const char* localpath, const bool& cont)
+int FSClient::download(const char* localpath, const bool& cont)
 {
    CGuard fg(m_FileLock);
 
@@ -294,7 +294,7 @@ int SectorFile::download(const char* localpath, const bool& cont)
    return 1;
 }
 
-int SectorFile::upload(const char* localpath, const bool& cont)
+int FSClient::upload(const char* localpath, const bool& cont)
 {
    CGuard fg(m_FileLock);
 
@@ -340,7 +340,7 @@ int SectorFile::upload(const char* localpath, const bool& cont)
    return 1;
 }
 
-int SectorFile::close()
+int FSClient::close()
 {
    CGuard fg(m_FileLock);
 
@@ -359,7 +359,7 @@ int SectorFile::close()
    return 1;
 }
 
-int SectorFile::seekp(int64_t off, int pos)
+int FSClient::seekp(int64_t off, int pos)
 {
    CGuard fg(m_FileLock);
 
@@ -387,7 +387,7 @@ int SectorFile::seekp(int64_t off, int pos)
    return 1;
 }
 
-int SectorFile::seekg(int64_t off, int pos)
+int FSClient::seekg(int64_t off, int pos)
 {
    CGuard fg(m_FileLock);
 
@@ -415,17 +415,17 @@ int SectorFile::seekg(int64_t off, int pos)
    return 1;
 }
 
-int64_t SectorFile::tellp()
+int64_t FSClient::tellp()
 {
    return m_llCurWritePos;
 }
 
-int64_t SectorFile::tellg()
+int64_t FSClient::tellg()
 {
    return m_llCurReadPos;
 }
 
-bool SectorFile::eof()
+bool FSClient::eof()
 {
    return (m_llCurReadPos >= m_llSize);
 }

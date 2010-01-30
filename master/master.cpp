@@ -42,7 +42,6 @@ written by
 #include <ssltransport.h>
 #include <dirent.h>
 #include <signal.h>
-#include <constant.h>
 #include <iostream>
 #include <stack>
 #include "master.h"
@@ -204,7 +203,7 @@ int Master::init()
    pthread_create(&repserver, NULL, replica, this);
    pthread_detach(repserver);
 
-   m_SysStat.m_llStartTime = time(NULL);
+   m_llStartTime = time(NULL);
    m_SectorLog.insert("Sector started.");
 
    cout << "Sector master is successfully running now. check sector.log for more details.\n";
@@ -1161,15 +1160,9 @@ int Master::processSysCmd(const char* ip, const int port, const ActiveUser* user
          break;
       }
 
-      m_SysStat.m_llAvailDiskSpace = m_SlaveManager.getTotalDiskSpace();
-      m_SysStat.m_llTotalSlaves = m_SlaveManager.getTotalSlaves();
-      m_SysStat.m_llTotalFileSize = m_pMetadata->getTotalDataSize("/");
-      m_SysStat.m_llTotalFileNum = m_pMetadata->getTotalFileNum("/");
-
-      int size = SysStat::g_iSize + m_SlaveManager.m_Cluster.m_mSubCluster.size() * 48 + m_Routing.m_mAddressList.size() * 20 + m_SlaveManager.m_mSlaveList.size() * 72;
-      char* buf = new char[size];
-      m_SysStat.serialize(buf, size, m_Routing.m_mAddressList, m_SlaveManager.m_mSlaveList, m_SlaveManager.m_Cluster);
-
+      char* buf = NULL;
+      int size = 0;
+      serializeSysStat(buf, size);
       msg->setData(0, buf, size);
       delete [] buf;
       m_GMP.sendto(ip, port, id, msg);
@@ -2343,4 +2336,59 @@ void Master::loadSlaveAddr(const string& file)
 
       m_mSlaveAddrRec[ip] = sa;
    }
+}
+
+int Master::serializeSysStat(char*& buf, int& size)
+{
+   *(int64_t*)buf = m_llStartTime;
+   *(int64_t*)(buf + 8) = m_SlaveManager.getTotalDiskSpace();
+   *(int64_t*)(buf + 16) = m_SlaveManager.getTotalSlaves();
+   *(int64_t*)(buf + 24) = m_pMetadata->getTotalDataSize("/");
+   *(int64_t*)(buf + 32) = m_pMetadata->getTotalFileNum("/");
+
+   size = 52 + m_SlaveManager.m_Cluster.m_mSubCluster.size() * 48 + m_Routing.m_mAddressList.size() * 20 + m_SlaveManager.m_mSlaveList.size() * 72;
+   buf = new char[size];
+
+   char* p = buf + 40;
+   *(int32_t*)p = m_SlaveManager.m_Cluster.m_mSubCluster.size();
+   p += 4;
+   for (map<int, Cluster>::iterator i = m_SlaveManager.m_Cluster.m_mSubCluster.begin(); i != m_SlaveManager.m_Cluster.m_mSubCluster.end(); ++ i)
+   {
+      *(int64_t*)p = i->second.m_iClusterID;
+      *(int64_t*)(p + 8) = i->second.m_iTotalNodes;
+      *(int64_t*)(p + 16) = i->second.m_llAvailDiskSpace;
+      *(int64_t*)(p + 24) = i->second.m_llTotalFileSize;
+      *(int64_t*)(p + 32) = i->second.m_llTotalInputData;
+      *(int64_t*)(p + 40) = i->second.m_llTotalOutputData;
+
+      p += 48;
+   }
+
+   *(int32_t*)p = m_Routing.m_mAddressList.size();
+   p += 4;
+   for (map<uint32_t, Address>::iterator i = m_Routing.m_mAddressList.begin(); i != m_Routing.m_mAddressList.end(); ++ i)
+   {
+      strcpy(p, i->second.m_strIP.c_str());
+      p += 16;
+      *(int32_t*)p = i->second.m_iPort;
+      p += 4;
+   }
+
+   *(int32_t*)p = m_SlaveManager.m_mSlaveList.size();
+   p += 4;
+   for (map<int, SlaveNode>::iterator i = m_SlaveManager.m_mSlaveList.begin(); i != m_SlaveManager.m_mSlaveList.end(); ++ i)
+   {
+      strcpy(p, i->second.m_strIP.c_str());
+      *(int64_t*)(p + 16) = i->second.m_llAvailDiskSpace;
+      *(int64_t*)(p + 24) = i->second.m_llTotalFileSize;
+      *(int64_t*)(p + 32) = i->second.m_llCurrMemUsed;
+      *(int64_t*)(p + 40) = i->second.m_llCurrCPUUsed;
+      *(int64_t*)(p + 48) = i->second.m_llTotalInputData;
+      *(int64_t*)(p + 56) = i->second.m_llTotalOutputData;
+      *(int64_t*)(p + 64) = i->second.m_llTimeStamp;
+
+      p += 72;
+   }
+
+   return size;
 }

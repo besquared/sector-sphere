@@ -43,14 +43,14 @@ written by
 
 #include <client.h>
 
-class SectorFile
+class FSClient
 {
 friend class Client;
 
 private:
-   SectorFile();
-   ~SectorFile();
-   const SectorFile& operator=(const SectorFile&) {return *this;}
+   FSClient();
+   ~FSClient();
+   const FSClient& operator=(const FSClient&) {return *this;}
 
 public:
    int open(const std::string& filename, int mode = SF_MODE::READ, const std::string& hint = "");

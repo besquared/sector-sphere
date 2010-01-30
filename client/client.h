@@ -44,21 +44,20 @@ written by
 
 #include <gmp.h>
 #include <index.h>
-#include <sysstat.h>
 #include <topology.h>
-#include <constant.h>
 #include <pthread.h>
 #include <datachn.h>
 #include <routing.h>
+#include <sector.h>
 #include "fscache.h"
 
-class SectorFile;
-class SphereProcess;
+class FSClient;
+class DCClient;
 
 class Client
 {
-friend class SectorFile;
-friend class SphereProcess;
+friend class FSClient;
+friend class DCClient;
 
 public:
    Client();
@@ -83,13 +82,15 @@ public:
    int sysinfo(SysStat& sys);
 
 public:
-   SectorFile* createSectorFile();
-   SphereProcess* createSphereProcess();
-   int releaseSectorFile(SectorFile* sf);
-   int releaseSphereProcess(SphereProcess* sp);
+   FSClient* createFSClient();
+   DCClient* createDCClient();
+   int releaseFSClient(FSClient* sf);
+   int releaseDCClient(DCClient* sp);
 
 protected:
    int updateMasters();
+
+   int deserializeSysStat(SysStat& sys, char* buf, int size);
 
 protected:
    std::string m_strUsername;           // user account name
@@ -132,10 +133,8 @@ protected: // the following are used for keeping alive with the masters
 protected:
    pthread_mutex_t m_IDLock;
    int m_iID;					// seed of id for each file or process
-   std::map<int, SectorFile*> m_mFSList;	// list of open files
-   std::map<int, SphereProcess*> m_mDCList;	// list of active process
+   std::map<int, FSClient*> m_mFSList;		// list of open files
+   std::map<int, DCClient*> m_mDCList;		// list of active process
 };
-
-typedef Client Sector;
 
 #endif

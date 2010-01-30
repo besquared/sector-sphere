@@ -39,15 +39,14 @@ written by
 *****************************************************************************/
 
 #include "dcclient.h"
-#include <constant.h>
 #include <errno.h>
 #include <iostream>
 
 using namespace std;
 
-SphereProcess* Client::createSphereProcess()
+DCClient* Client::createDCClient()
 {
-   SphereProcess* sp = new SphereProcess;
+   DCClient* sp = new DCClient;
    sp->m_pClient = this;
    pthread_mutex_lock(&m_IDLock);
    sp->m_iID = m_iID ++;
@@ -57,7 +56,7 @@ SphereProcess* Client::createSphereProcess()
    return sp;
 }
 
-int Client::releaseSphereProcess(SphereProcess* sp)
+int Client::releaseDCClient(DCClient* sp)
 {
    pthread_mutex_lock(&m_IDLock);
    m_mDCList.erase(sp->m_iID);
@@ -155,7 +154,7 @@ SphereResult::~SphereResult()
 }
 
 //
-SphereProcess::SphereProcess():
+DCClient::DCClient():
 m_iMinUnitSize(1000000),
 m_iMaxUnitSize(256000000),
 m_iCore(1),
@@ -186,7 +185,7 @@ m_bDataMove(true)
    pthread_mutex_init(&m_RunLock, NULL);
 }
 
-SphereProcess::~SphereProcess()
+DCClient::~DCClient()
 {
    delete [] m_pcParam;
    delete [] m_pOutputLoc;
@@ -197,7 +196,7 @@ SphereProcess::~SphereProcess()
    pthread_mutex_destroy(&m_RunLock);
 }
 
-int SphereProcess::loadOperator(const char* library)
+int DCClient::loadOperator(const char* library)
 {
    struct stat st;
    if (::stat(library, &st) < 0)
@@ -230,7 +229,7 @@ int SphereProcess::loadOperator(const char* library)
    return 0;
 }
 
-int SphereProcess::loadOperator(SPE& s)
+int DCClient::loadOperator(SPE& s)
 {
    int num = m_vOP.size();
    m_pClient->m_DataChn.send(s.m_strIP, s.m_iDataPort, s.m_iSession, (char*)&num, 4);
@@ -251,7 +250,7 @@ int SphereProcess::loadOperator(SPE& s)
    return 0;
 }
 
-int SphereProcess::run(const SphereStream& input, SphereStream& output, const string& op, const int& rows, const char* param, const int& size, const int& type)
+int DCClient::run(const SphereStream& input, SphereStream& output, const string& op, const int& rows, const char* param, const int& size, const int& type)
 {
    pthread_mutex_lock(&m_RunLock);
    pthread_mutex_unlock(&m_RunLock);
@@ -334,12 +333,12 @@ int SphereProcess::run(const SphereStream& input, SphereStream& output, const st
    return 0;
 }
 
-int SphereProcess::run_mr(const SphereStream& input, SphereStream& output, const string& mr, const int& rows, const char* param, const int& size)
+int DCClient::run_mr(const SphereStream& input, SphereStream& output, const string& mr, const int& rows, const char* param, const int& size)
 {
    return run(input, output, mr, rows, param, size, 1);
 }
 
-int SphereProcess::close()
+int DCClient::close()
 {
    pthread_mutex_lock(&m_RunLock);
    pthread_mutex_unlock(&m_RunLock);
@@ -365,9 +364,9 @@ int SphereProcess::close()
    return 0;
 }
 
-void* SphereProcess::run(void* param)
+void* DCClient::run(void* param)
 {
-   SphereProcess* self = (SphereProcess*)param;
+   DCClient* self = (DCClient*)param;
 
    pthread_mutex_lock(&self->m_RunLock);
 
@@ -479,7 +478,7 @@ void* SphereProcess::run(void* param)
    return NULL;
 }
 
-int SphereProcess::checkSPE()
+int DCClient::checkSPE()
 {
    timeval t;
    gettimeofday(&t, 0);
@@ -622,7 +621,7 @@ int SphereProcess::checkSPE()
    return m_iTotalSPE;
 }
 
-int SphereProcess::checkBucket()
+int DCClient::checkBucket()
 {
    int count = 0;
    for (map<int, BUCKET>::iterator b = m_mBucket.begin(); b != m_mBucket.end(); ++ b)
@@ -634,7 +633,7 @@ int SphereProcess::checkBucket()
    return m_mBucket.size() - count;
 }
 
-int SphereProcess::startSPE(SPE& s, DS* d)
+int DCClient::startSPE(SPE& s, DS* d)
 {
    int res = 0;
 
@@ -671,7 +670,7 @@ int SphereProcess::startSPE(SPE& s, DS* d)
    return res;
 }
 
-int SphereProcess::checkProgress()
+int DCClient::checkProgress()
 {
    if ((0 == m_iTotalSPE) && (m_iProgress < m_iTotalDS))
       return SectorError::E_RESOURCE;
@@ -692,12 +691,12 @@ int SphereProcess::checkProgress()
    return progress;
 }
 
-int SphereProcess::checkMapProgress()
+int DCClient::checkMapProgress()
 {
    return checkProgress();
 }
 
-int SphereProcess::checkReduceProgress()
+int DCClient::checkReduceProgress()
 {
    if (m_mBucket.empty())
       return 100;
@@ -712,7 +711,7 @@ int SphereProcess::checkReduceProgress()
    return count * 100 / m_mBucket.size();   
 }
 
-int SphereProcess::read(SphereResult*& res, const bool& inorder, const bool& wait)
+int DCClient::read(SphereResult*& res, const bool& inorder, const bool& wait)
 {
    while (0 == m_iAvailRes)
    {
@@ -777,7 +776,7 @@ int SphereProcess::read(SphereResult*& res, const bool& inorder, const bool& wai
    return -1;
 }
 
-int SphereProcess::dataInfo(const vector<string>& files, vector<string>& info)
+int DCClient::dataInfo(const vector<string>& files, vector<string>& info)
 {
    SectorMsg msg;
    msg.setType(201);
@@ -819,7 +818,7 @@ int SphereProcess::dataInfo(const vector<string>& files, vector<string>& info)
 }
 
 
-int SphereProcess::prepareInput()
+int DCClient::prepareInput()
 {
    if ((m_pInput->m_iStatus != 0) || m_pInput->m_vOrigInput.empty())
       return -1;
@@ -911,7 +910,7 @@ int SphereProcess::prepareInput()
    return m_pInput->m_iFileNum;
 }
 
-int SphereProcess::prepareSPE(const char* spenodes)
+int DCClient::prepareSPE(const char* spenodes)
 {
    for (int c = 0; c < m_iCore; ++ c)
    {
@@ -934,7 +933,7 @@ int SphereProcess::prepareSPE(const char* spenodes)
    return m_mSPE.size();
 }
 
-int SphereProcess::connectSPE(SPE& s)
+int DCClient::connectSPE(SPE& s)
 {
    if (s.m_iStatus != 0)
       return -1;
@@ -988,7 +987,7 @@ int SphereProcess::connectSPE(SPE& s)
    return 1;
 }
 
-int SphereProcess::segmentData()
+int DCClient::segmentData()
 {
    if (0 == m_iRows)
    {
@@ -1086,7 +1085,7 @@ int SphereProcess::segmentData()
    return m_mpDS.size();
 }
 
-int SphereProcess::prepareOutput(const char* spenodes)
+int DCClient::prepareOutput(const char* spenodes)
 {
    m_pOutputLoc = NULL;
    m_pOutput->m_llSize = 0;
@@ -1223,7 +1222,7 @@ int SphereProcess::prepareOutput(const char* spenodes)
    return m_pOutput->m_iFileNum;
 }
 
-int SphereProcess::readResult(SPE* s)
+int DCClient::readResult(SPE* s)
 {
    if (m_iOutputType == 0)
    {

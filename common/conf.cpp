@@ -356,3 +356,133 @@ int ClientConf::init(const string& path)
 
    return 0;
 }
+
+bool WildCard::isWildCard(const string& path)
+{
+   if (path.find('*') != string::npos)
+      return true;
+
+   if (path.find('?') != string::npos)
+      return true;
+
+   return false;
+}
+
+bool WildCard::match(const string& card, const string& path)
+{
+   const char* p = card.c_str();
+   const char* q = path.c_str();
+
+   unsigned int i = 0;
+   unsigned int j = 0;
+   while ((i < card.length()) && (j < path.length()))
+   {
+      switch (p[i])
+      {
+      case '*':
+         if (i == card.length() - 1)
+            return true;
+
+         while (p[i] == '*')
+            ++ i;
+
+         for (; j < path.length(); ++ j)
+         {
+            if (((q[j] == p[i]) || (p[i] == '?') ) && match(p + i, q + j))
+               return true;
+         }
+
+         return false;
+
+      case '?':
+         break;
+
+      default:
+         if (p[i] != q[j])
+            return false;
+      }
+
+      ++ i;
+      ++ j;
+   }
+
+   if ((i != card.length()) || (j != path.length()))
+      return false;
+
+   return true;
+}
+
+
+int Session::loadInfo(const string& conf)
+{
+   m_ClientConf.init(conf);
+
+   if (m_ClientConf.m_strMasterIP == "")
+   {
+      cout << "please input the master address (e.g., 123.123.123.123:1234): ";
+      string addr;
+      cin >> addr;
+
+      char buf[128];
+      strcpy(buf, addr.c_str());
+
+      unsigned int i = 0;
+      for (; i < strlen(buf); ++ i)
+      {
+         if (buf[i] == ':')
+            break;
+      }
+
+      buf[i] = '\0';
+      m_ClientConf.m_strMasterIP = buf;
+      m_ClientConf.m_iMasterPort = atoi(buf + i + 1);
+   }
+
+   if (m_ClientConf.m_strUserName == "")
+   {
+      cout << "please input the user name: ";
+      cin >> m_ClientConf.m_strUserName;
+   }
+
+   if (m_ClientConf.m_strPassword == "")
+   {
+      cout << "please input the password: ";
+      cin >> m_ClientConf.m_strPassword;
+   }
+
+   if (m_ClientConf.m_strCertificate == "")
+   {
+      cout << "please specify the location of the master certificate: ";
+      cin >> m_ClientConf.m_strCertificate;
+   }
+
+   //TODO: if m_strCert is relative dir, use getcwd to change it into absolute dir
+
+   return 1;
+}
+
+int CmdLineParser::parse(int argc, char** argv)
+{
+   m_mParams.clear();
+
+   bool dash = false;
+   string key;
+   for (int i = 1; i < argc; ++ i)
+   {
+      if (argv[i][0] == '-')
+      {
+         dash = true;
+         key = argv[i] + 1;
+      }
+      else
+      {
+         if (!dash)
+            return -1;
+
+         m_mParams[key] = argv[i];
+      }
+   }
+
+   return m_mParams.size();
+}
+

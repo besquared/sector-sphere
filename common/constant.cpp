@@ -38,7 +38,7 @@ written by
    Yunhong Gu, last updated 07/15/2009
 *****************************************************************************/
 
-#include "constant.h"
+#include <sector.h>
 
 using namespace std;
 

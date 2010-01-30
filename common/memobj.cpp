@@ -40,7 +40,7 @@ written by
 
 #include <meta.h>
 #include <common.h>
-#include "memobj.h"
+#include <sphere.h>
 
 using namespace std;
 

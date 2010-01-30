@@ -38,7 +38,6 @@ written by
    Yunhong Gu, last updated 01/08/2010
 *****************************************************************************/
 
-#include <snode.h>
 #include <fstream>
 #include <cstring>
 #include <cstdlib>
@@ -47,6 +46,7 @@ written by
 #include <sys/stat.h>
 #include <unistd.h>
 #include <iostream>
+#include <sector.h>
 
 using namespace std;
 

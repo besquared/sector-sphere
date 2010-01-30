@@ -45,7 +45,6 @@ written by
 #include <gmp.h>
 #include <transport.h>
 #include <log.h>
-#include <sysstat.h>
 #include <conf.h>
 #include <index.h>
 #include <index2.h>
@@ -57,8 +56,7 @@ written by
 #include <transaction.h>
 #include <user.h>
 #include <threadpool.h>
-
-
+	
 struct SlaveAddr
 {
    std::string m_strAddr;				// master IP address
@@ -127,8 +125,6 @@ private:
 
    SectorLog m_SectorLog;				// sector log
 
-   SysStat m_SysStat;					// system statistics
-
    int m_iMaxActiveUser;				// maximum number of active users allowed
    std::map<int, ActiveUser> m_mActiveUser;		// list of active users
 
@@ -147,6 +143,10 @@ private:
 private:
    std::map<std::string, SlaveAddr> m_mSlaveAddrRec;	// slave and its executale path
    void loadSlaveAddr(const std::string& file);
+
+private:
+   int64_t m_llStartTime;
+   int serializeSysStat(char*& buf, int& size);
 };
 
 #endif

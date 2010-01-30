@@ -48,13 +48,13 @@ written by
 using namespace std;
 
 Client::Client():
+m_strUsername(""),
+m_strPassword(""),
+m_strCert(""),
 m_strServerHost(""),
 m_strServerIP(""),
 m_iKey(0),
 m_iCount(0),
-m_strUsername(""),
-m_strPassword(""),
-m_strCert(""),
 m_bActive(false),
 m_iID(0)
 {
@@ -546,7 +546,7 @@ int Client::sysinfo(SysStat& sys)
    if (msg.getType() < 0)
       return *(int32_t*)(msg.getData());
 
-   sys.deserialize(msg.getData(), msg.m_iDataLength);
+   deserializeSysStat(sys, msg.getData(), msg.m_iDataLength);
 
    for (vector<Address>::iterator i = sys.m_vMasterList.begin(); i != sys.m_vMasterList.end(); ++ i)
    {
@@ -633,4 +633,62 @@ void* Client::keepAlive(void* param)
    }
 
    return NULL;
+}
+
+int Client::deserializeSysStat(SysStat& sys, char* buf, int size)
+{
+   if (size < 52)
+      return -1;
+
+   sys.m_llStartTime = *(int64_t*)buf;
+   sys.m_llAvailDiskSpace = *(int64_t*)(buf + 8);
+   sys.m_llTotalFileSize = *(int64_t*)(buf + 16);
+   sys.m_llTotalFileNum = *(int64_t*)(buf + 24);
+   sys.m_llTotalSlaves = *(int64_t*)(buf + 32);
+
+   char* p = buf + 40;
+   int c = *(int32_t*)p;
+   sys.m_vCluster.resize(c);
+   p += 4;
+   for (vector<SysStat::ClusterStat>::iterator i = sys.m_vCluster.begin(); i != sys.m_vCluster.end(); ++ i)
+   {
+      i->m_iClusterID = *(int64_t*)p;
+      i->m_iTotalNodes = *(int64_t*)(p + 8);
+      i->m_llAvailDiskSpace = *(int64_t*)(p + 16);
+      i->m_llTotalFileSize = *(int64_t*)(p + 24);
+      i->m_llTotalInputData = *(int64_t*)(p + 32);
+      i->m_llTotalOutputData = *(int64_t*)(p + 40);
+
+      p += 48;
+   }
+
+   int m = *(int32_t*)p;
+   p += 4;
+   sys.m_vMasterList.resize(m);
+   for (vector<Address>::iterator i = sys.m_vMasterList.begin(); i != sys.m_vMasterList.end(); ++ i)
+   {
+      i->m_strIP = p;
+      p += 16;
+      i->m_iPort = *(int32_t*)p;
+      p += 4;
+   }
+
+   int n = *(int32_t*)p;
+   p += 4;
+   sys.m_vSlaveList.resize(n);
+   for (vector<SysStat::SlaveStat>::iterator i = sys.m_vSlaveList.begin(); i != sys.m_vSlaveList.end(); ++ i)
+   {
+      i->m_strIP = p;
+      i->m_llAvailDiskSpace = *(int64_t*)(p + 16);
+      i->m_llTotalFileSize = *(int64_t*)(p + 24);
+      i->m_llCurrMemUsed = *(int64_t*)(p + 32);
+      i->m_llCurrCPUUsed = *(int64_t*)(p + 40);
+      i->m_llTotalInputData = *(int64_t*)(p + 48);
+      i->m_llTotalOutputData = *(int64_t*)(p + 56);
+      i->m_llTimeStamp = *(int64_t*)(p + 64);
+
+      p += 72;
+   }
+
+   return 0;
 }

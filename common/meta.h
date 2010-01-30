@@ -48,8 +48,7 @@ written by
 #include <set>
 #include <fstream>
 #include <topology.h>
-#include <snode.h>
-#include <constant.h>
+#include <sector.h>
 
 class Metadata
 {

@@ -1,4 +1,4 @@
-SUBDIRS = udt common security gmp master slave client
+SUBDIRS = udt common security gmp master slave client tools examples
 TARGETS = clean all install
 
 subdirs:

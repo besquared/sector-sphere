@@ -48,21 +48,7 @@ written by
 #include <vector>
 #include <stdint.h>
 
-struct Address
-{
-   std::string m_strIP;
-   unsigned short int m_iPort;
-};
-
-struct AddrComp
-{
-   bool operator()(const Address& a1, const Address& a2) const
-   {
-      if (a1.m_strIP == a2.m_strIP)
-         return a1.m_iPort < a2.m_iPort;
-      return a1.m_strIP < a2.m_strIP;
-   }
-};
+#include <sector.h>
 
 class SlaveNode
 {

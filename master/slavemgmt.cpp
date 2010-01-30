@@ -43,7 +43,6 @@ written by
 #include <sys/time.h>
 #include <sys/types.h>
 #include <common.h>
-#include <constant.h>
 #include <meta.h>
 
 using namespace std;

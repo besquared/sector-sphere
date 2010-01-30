@@ -12,7 +12,7 @@ OBJS = conf.o snode.o meta.o index.o index2.o memobj.o topology.o sysstat.o log.
 
 all: libcommon.so libcommon.a
 
-%.o: %.cpp %.h
+%.o: %.cpp
 	$(C++) -fPIC $(CCFLAGS) $< -c
 
 libcommon.so: $(OBJS)

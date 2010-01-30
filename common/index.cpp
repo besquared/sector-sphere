@@ -50,7 +50,6 @@ written by
 #include <sys/stat.h>
 #include <unistd.h>
 #include <cstring>
-#include <constant.h>
 
 using namespace std;
 
@@ -399,7 +398,7 @@ int Index::update(const string& fileinfo, const Address& loc, const int& type)
          n.m_llTimeStamp = sn.m_llTimeStamp;
          n.m_llSize = 0;
          (*currdir)[*d] = n;
-         s = currdir->find(*d);;
+         s = currdir->find(*d);
       }
 
       s->second.m_llTimeStamp = sn.m_llTimeStamp;
