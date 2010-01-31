@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 01/07/2010
+   Yunhong Gu, last updated 01/30/2010
 *****************************************************************************/
 
 
@@ -560,6 +560,8 @@ int Index::scan(const string& datadir, const string& metadir)
 
 int Index::merge(const string& path, Metadata* meta, const unsigned int& replica)
 {
+   CGuard mg(m_MetaLock);
+
    merge(m_mDirectory, ((Index*)meta)->m_mDirectory, replica);
 
    return 0;
