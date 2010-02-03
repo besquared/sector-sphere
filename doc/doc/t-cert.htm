@@ -15,28 +15,28 @@
 <div class="ref_head">&nbsp;Installation</div>
 
 <h3><font color="#000080">Understanding the Certificates </font></h3>
-<p>Sector uses SSL for secure communication between clients and the master, and between the master and the security server. This requires two sets of SSL key/certificate pairs before the system can start to work. The two sets of key/certificate are secuirity_node.key/security_node.cert, and master_node.key/master_node.cert. All keys and certificates are put in ./codeblue2/conf. </p>
+<p>Sector uses SSL for secure communication between clients and the master, and between the master and the security server. This requires two sets of SSL key/certificate pairs before the system can start to work. The two sets of key/certificate are secuirity_node.key/security_node.cert, and master_node.key/master_node.cert. All keys and certificates are put in ./sector-sphere/conf. </p>
 
 <p><b>security_node.key/security_node.cert</b></p>
-<p>If the master node is different from the security server node, the file security_node.cert must be copied into ./codeblue2/conf on the master node. However, the file security_node.key MUST NOT be copied. This key/certificate pair is used for the secure communication between the security server and the master server. </p>
+<p>If the master node is different from the security server node, the file security_node.cert must be copied into ./sector-sphere/conf on the master node. However, the file security_node.key MUST NOT be copied. This key/certificate pair is used for the secure communication between the security server and the master server. </p>
 <p><b>master_node.key/master_node.cert</b></p>
-<p>The certificate master_node.cert must exist on every slave node in the directory of ./codeblue2/conf on every slave and every client nodes. However, the file master_node.key MUST NOT be copied to the slave and client node. This key/certificate pair is used for the secure communication between the master server and the slaves, and between the master and the clients. </p>
+<p>The certificate master_node.cert must exist on every slave node in the directory of ./sector-sphere/conf on every slave and every client nodes. However, the file master_node.key MUST NOT be copied to the slave and client node. This key/certificate pair is used for the secure communication between the master server and the slaves, and between the master and the clients. </p>
 <p>In Sector, Slaves do not communicate directly, neither does a client and any slave node. Such communication must be set up via the master server, and verified by the security server when necessary. </p>
 <p><strong>Generate and distribute the certificates </strong></p>
 <p>There are no keys or certificates included in the software releases. During the first make of the source code, the keys and the certificates will be automatically generated. All keys and certificates are put in the ./conf directory. If there is no shared file system for the clusters, the certificates (NOT keys) should be copied to each slave node and each client node.</p>
-<p>In case if the key/certificate pair need to be re-generated,  please delete the key/certificate files in ./conf, and then run &quot;ssl_cert_gen&quot; (located in ./codeblue2/security). This tool generates the keys and certificates and copies the certificates to the proper directories (./conf).</p>
+<p>In case if the key/certificate pair need to be re-generated,  please delete the key/certificate files in ./conf, and then run &quot;ssl_cert_gen&quot; (located in ./sector-sphere/security). This tool generates the keys and certificates and copies the certificates to the proper directories (./conf).</p>
 <p>Note that the key/certificate pair must be from the same generation. That is, if you change the key file, you must replace all certificate files using the certificate that matches the key. </p>
 <div class="code">
-    yunhong@ncdm161:~/codeblue2/security$  ./ssl_cert_gen<br />
+    yunhong@ncdm161:~/sector-sphere/security$  ./ssl_cert_gen<br />
     usage: ssl_cert_gen security OR ssl_cert_gen master<br />
     <br />
-    yunhong@ncdm161:~/codeblue2/security$ ./ssl_cert_gen security<br />
+    yunhong@ncdm161:~/sector-sphere/security$ ./ssl_cert_gen security<br />
     Generating RSA private key, 1024 bit long modulus<br />
     ......................................++++++<br />
     ......................++++++<br />
     e is 65537 (0x10001)<br />
 <br />
-yunhong@ncdm161:~/personal/codeblue2/security$ ./ssl_cert_gen master<br />
+yunhong@ncdm161:~/sector-sphere/security$ ./ssl_cert_gen master<br />
 Generating RSA private key, 1024 bit long modulus<br />
 ................++++++<br />
 ..++++++<br />

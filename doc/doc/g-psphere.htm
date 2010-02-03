@@ -15,11 +15,13 @@
 
 <h3><font color="#000080">Programming with Sphere </font></h3>
 <p><strong>Prerequisite</strong></p>
-<p>To use Sphere API, the application should include &lt;dcclient.h&gt;. In addition, certain header files in other directories (./common, ./gmp, and ./udt) may be required to be accessible. It is recommended that beginners write the first program in the same directory of the Sphere examples in ./client/examples.</p>
+<p>To use Sphere API, the application should include ./sector-sphere/include/sector.h. In addition, the user defined function (UDF) needs to include ./sector-sphere/include/sphere.h. These are the only header files required.  The libraries to link with are located in ./sector-sphere/lib. Programming examples can be found in ./sector-sphere/examples. </p>
 <p><strong>Connect the Master</strong></p>
 <p>The client needs to know the address of the master node (IP and PORT). The Sector client can then be initialized by the <a href="r-c-client-init.htm">init</a> call. After that, the user can login with the user name and password. This process is encrypted using SSL. The qualifier &quot;Sector&quot; is an alias to the Sector class &quot;Client&quot;. All the connection and login API are global functions and there is no need for any local variables. </p>
-<div class="code"> Sector::init(IP, PORT);<br />
-Sector::login(&quot;test&quot;, &quot;xxx&quot;);</div>
+<div class="code"> 
+Sector client;<br />
+client.init(IP, PORT);<br />
+client.login(&quot;test&quot;, &quot;xxx&quot;);</div>
 <p><strong>Prepare Input and Output </strong></p>
 <p>Every Sphere process requires an input parameter and an output parameter, both of which are of the type <a href="r-c-spherestream.htm">SphereStream</a>. A SphereStream is a data structure that contains a list of data files and the information about this data (size, number of records, etc.). The input stream can initialized with a list of files or directories and Sphere will retrieve the detailed data information from Sector.</p>
 <div class="code">
@@ -49,7 +51,7 @@ temp.init(256);</div>
   while (true)<br />
   {<br />
   &nbsp;&nbsp;SphereResult* res;<br />
-  &nbsp;&nbsp;if (myproc.read(res) &lt; 0)<br />
+  &nbsp;&nbsp;if (myproc.read(res) &lt;= 0)<br />
     &nbsp;&nbsp;{<br />
     &nbsp;&nbsp;&nbsp;&nbsp;if (myproc.checkProgress() &lt; 0)<br />
     &nbsp;&nbsp;&nbsp;&nbsp;{<br />
@@ -64,8 +66,8 @@ temp.init(256);</div>
 
 <p><strong>Disconnect and Logout the System </strong></p>
 <p>When the application does not need to access Sector any more, it should logout the user and disconnect from the system. </p>
-<div class="code"> Sector::logout();<br />
-Sector::close();<br />
+<div class="code"> client.logout();<br />
+client.close();<br />
 </div>
 </body>
 </html>

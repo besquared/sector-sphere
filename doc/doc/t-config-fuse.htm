@@ -19,7 +19,7 @@
 
 <h3><font color="#000080">Mounting Sector as a User Space File System</font></h3>
 <p>Sector includes  a mountable user space file system interface implemented using <a href="http://fuse.sourceforge.net/" target="_blank">FUSE</a>. This allows Sector to be mounted and used just like a directory on the local file system.</p>
-<p>Sector-FUSE is located in ./client/fuse. By default,  this directory is not compiled together with rest of the system. To use this feature, install FUSE (<strong>version 2.6 or above</strong>) first, if it is not installed previously, then compile ./client/fuse, and run sector-fuse to mount the Sector file system. </p>
+<p>Sector-FUSE is located in ./sector-sphere/fuse. By default,  this directory is not compiled together with rest of the system. To use this feature, install FUSE (<strong>version 2.6 or above</strong>) first, if it is not installed previously, then compile ./sector-sphere/fuse, and run sector-fuse to mount the Sector file system. </p>
 <p><span class="style1">NOTE</span>: <u>Because Sector is a network file system and FUSE also incurs additional round trip messages, using Sector-FUSE is inefficient for small IO </u>. </p>
 <p><b>Install FUSE </b></p>
 <p>FUSE has been officially merged into the Linux kernel tree since kernel version 2.6. To install FUSE, you may simply use the FUSE package for the specific Linux distribution. For example, on Debian, you can use: </p>
@@ -32,18 +32,18 @@
 <p>Note that you need root privilege to run these commands. After this, FUSE will be installed and started. A &quot;fuse&quot; group will be created and you need to put all Sector-FUSE users into this group. You may also start Sector-FUSE with &quot;root&quot;. However, this is not recommended.</p>
 <p>You may also download FUSE source code and install from the source. For more information about FUSE, please  visit <a href="http://fuse.sourceforge.net/" target="_blank">http://fuse.sourceforge.net</a>. </p>
 <p><b>Compile and Start Sector-FUSE </b></p>
-<p>In ./client/fuse, run &quot;make&quot;, which will compile the Sector-FUSE utility. Note that FUSE must be installed and started and the Sector system must be successfully compiled and all library files should exist in ./codeblue2/lib. After a successful make, run ./sector-fuse &lt;local dir&gt;, where &lt;local dir&gt; is an empty directory on the local file system. Now you can access the Sector file system via this directory. </p>
+<p>In ./sector-sphere/fuse, run &quot;make&quot;, which will compile the Sector-FUSE utility. Note that FUSE must be installed and started and the Sector system must be successfully compiled and the client configuration file must exist in ./sector-sphere/conf. After a successful make, run ./sector-fuse &lt;local dir&gt;, where &lt;local dir&gt; is an empty directory on the local file system. Now you can access the Sector file system via this directory. </p>
 <p>To unmount Sector-FUSE, run &quot;fusermount -u &lt;local dir&gt;&quot;. </p>
-<div class="code">gu@ncdm90:~/codeblue2/client/fuse$ mkdir test<br />
-  gu@ncdm90:~/codeblue2/client/fuse$ ./sector-fuse test <br />
-  gu@ncdm90:~/codeblue2/client/fuse$ cd test <br />
-  gu@ncdm90:~/codeblue2/client/fuse/test$ ls <br />
+<div class="code">gu@ncdm90:~/sector-sphere/fuse$ mkdir test<br />
+  gu@ncdm90:~/sector-sphere/fuse$ ./sector-fuse test <br />
+  gu@ncdm90:~/sector-sphere/fuse$ cd test <br />
+  gu@ncdm90:~/sector-sphere/fuse/test$ ls <br />
   bar         sector2           test.secure5.txt<br />
   bar2        sector2.idx       test.secure6.txt<br />
   fraudcount  sector8           uofc2-1185190800-dump.7.3131.pcap<br />
-  gu@ncdm90:~/codeblue2/client/fuse/test$ cd .. <br />
-  gu@ncdm90:~/codeblue2/client/fuse$ <br />
-gu@ncdm90:~/codeblue2/client/fuse$ fusermount -u test</div>
+  gu@ncdm90:~/sector-sphere/fuse/test$ cd .. <br />
+  gu@ncdm90:~/sector-sphere/fuse$ <br />
+gu@ncdm90:~/sector-sphere/fuse$ fusermount -u test</div>
 
 <p>&nbsp;</p>
 </body>

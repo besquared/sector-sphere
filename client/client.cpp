@@ -107,7 +107,7 @@ int Client::init(const string& server, const int& port)
    m_bActive = true;
    pthread_create(&m_KeepAlive, NULL, keepAlive, this);
 
-   return 1;
+   return 0;
 }
 
 int Client::login(const string& username, const string& password, const char* cert)
@@ -303,7 +303,7 @@ int Client::close()
       Transport::release();
    }
 
-   return 1;
+   return 0;
 }
 
 int Client::list(const string& path, vector<SNode>& attr)
@@ -377,7 +377,7 @@ int Client::stat(const string& path, SNode& attr)
    // check local cache: updated files may not be sent to the master yet
    m_StatCache.stat(path, attr);
 
-   return 1;
+   return 0;
 }
 
 int Client::mkdir(const string& path)
@@ -399,7 +399,7 @@ int Client::mkdir(const string& path)
    if (msg.getType() < 0)
       return *(int32_t*)(msg.getData());
 
-   return 1;
+   return 0;
 }
 
 int Client::move(const string& oldpath, const string& newpath)
@@ -428,7 +428,7 @@ int Client::move(const string& oldpath, const string& newpath)
    if (msg.getType() < 0)
       return *(int32_t*)(msg.getData());
 
-   return 1;
+   return 0;
 }
 
 int Client::remove(const string& path)
@@ -450,7 +450,7 @@ int Client::remove(const string& path)
    if (msg.getType() < 0)
       return *(int32_t*)(msg.getData());
 
-   return 1;
+   return 0;
 }
 
 int Client::rmr(const string& path)
@@ -503,7 +503,7 @@ int Client::copy(const string& src, const string& dst)
    if (msg.getType() < 0)
       return *(int32_t*)(msg.getData());
 
-   return 1;
+   return 0;
 }
 
 int Client::utime(const string& path, const int64_t& ts)
@@ -526,7 +526,7 @@ int Client::utime(const string& path, const int64_t& ts)
    if (msg.getType() < 0)
       return *(int32_t*)(msg.getData());
 
-   return 1;
+   return 0;
 }
 
 int Client::sysinfo(SysStat& sys)
@@ -557,7 +557,7 @@ int Client::sysinfo(SysStat& sys)
       }
    }
 
-   return 1;
+   return 0;
 }
 
 int Client::updateMasters()

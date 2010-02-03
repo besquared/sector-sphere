@@ -31,10 +31,9 @@
 <div class="code"> 
 SphereStream sdss, output;<br />
 sdss.init(“/sdss”);<br />
-SphereProcess myproc;<br />
+SphereProcess* myproc = client.createSphereProcess();<br />
 myproc-&gt;run(sdss, &quot;findBrownDwarf&quot;, output, parameter);<br />
-myproc-&gt;read(result);
-</div>
+myproc-&gt;read(result);</div>
 
 <p>In the code fragment above, &quot;sdss&quot; is a Sector  stream data structure that stores the metadata of the SDSS files. The  application can initialize the stream by giving it a list of file names or the  name of a directory if all files in the directory should be processed. Sphere  automatically retrieves the metadata from the Sector network. The user puts the  function into a dynamic library and uses the Sphere API to upload the library  to the slave nodes. The last three lines will simply start the job and wait for  the result using a small number of Sphere APIs. There is no need for users to  explicitly move data, nor do they need to know any information about the Sector  system except the location of the master nodes to which the client can connect.</p>
 

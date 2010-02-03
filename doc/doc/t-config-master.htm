@@ -15,11 +15,11 @@
 <div class="ref_head">&nbsp;Installation</div>
 
 <h3><font color="#000080">Configuring the Master Server </font></h3>
-<p>There are three configuration files for the master server: master.conf, topology.conf, and slaves.list. These files are located in the configuration file directory (./codeblue2/conf). The file &quot;master.conf&quot; includes the basic information required to start the master server, such as server port number. This file MUST be configured. The file &quot;topology.conf&quot; specifies the topology information of the slaves network. This is optional. The file &quot;slaves.list&quot; includes a list of slave nodes that the master can automatically start or shutdown. This is also optional. </p>
+<p>There are three configuration files for the master server: master.conf, topology.conf, and slaves.list. These files are located in the configuration file directory (./sector-sphere/conf). The file &quot;master.conf&quot; includes the basic information required to start the master server, such as server port number. This file MUST be configured. The file &quot;topology.conf&quot; specifies the topology information of the slaves network. This is optional. The file &quot;slaves.list&quot; includes a list of slave nodes that the master can automatically start or shutdown. This is also optional. </p>
 
 <p><b>master.conf</b></p>
-<p>A copy of the master configuration file can be found below. The SECTOR_PORT is the port number on which the Sector master will listen to requests from clients. Note that although you only specifily one port number here, Sector will actually use two consectutive numbers. For example, if you use port 6000, Sector will use both ports 6000 and 6001. The SECURITY_SERVER is the address of the security server in the format of &lt;ip:port&gt; or &lt;domain_name:port&gt;. The option &quot;REPLICA_NUM&quot; specifies the number of replicas of each file in the system. Finally, you also need to specify a directory to which Sector can store temporary files under the option &quot;DATA_DIRECTORY&quot;. If the directory does not exist, Sector will create it automatically, provided that the master program has write permission to the directory. There are more options in the configuration file and the explaination for each option is also included immediately above the option name.</p>
-<p>In the confiuguration file, <span class="style1">the option value must be preceded by a &quot;TAB&quot; charactor</span>. The &quot;#&quot; charactor can be used for comment lines. </p>
+<p>A copy of the master configuration file can be found below. The SECTOR_PORT is the port number on which the Sector master will listen to requests from clients. Note that although you only specify one port number here, Sector will actually use two consecutive numbers. For example, if you use port 6000, Sector will use both ports 6000 and 6001. The SECURITY_SERVER is the address of the security server in the format of &lt;ip:port&gt; or &lt;domain_name:port&gt;. The option &quot;REPLICA_NUM&quot; specifies the number of replicas of each file in the system. Finally, you also need to specify a directory to which Sector can store temporary files under the option &quot;DATA_DIRECTORY&quot;. If the directory does not exist, Sector will create it automatically, provided that the master program has write permission to the directory. There are more options in the configuration file and the explanation for each option is also included immediately above the option name.</p>
+<p>In the configuration file, <span class="style1">the option value must be preceded by a &quot;TAB&quot; character.</span> The &quot;#&quot; character can be used for comment lines. </p>
 <div class="code">
 #SECTOR server port number<br />
   SECTOR_PORT<br />
@@ -50,14 +50,14 @@
 </div>
 
 <p><strong>topology.conf </strong></p>
-<p>Sector assumes that ther slave nodes are computers in one or more clusters, while clusters can be allocated in one or more data centers, and so on. This is a multi-level hierarchical topology. The position of each IP range is represented by &quot;/L1/L2/.../Ln&quot; is an n-level structure and L1 is the first level. For example, in a 2-level topology, &quot;/1/2&quot; means the 2nd cluster in the 1st data center. The number of levels for each IP address or IP address range must be equal. </p>
+<p>Sector assumes that the slave nodes are computers in one or more clusters, while clusters can be allocated in one or more data centers, and so on. This is a multi-level hierarchical topology. The position of each IP range is represented by &quot;/L1/L2/.../Ln&quot; is an n-level structure and L1 is the first level. For example, in a 2-level topology, &quot;/1/2&quot; means the 2nd cluster in the 1st data center. The number of levels for each IP address or IP address range must be equal. </p>
 <p>The slave IPs can be either a single IP address, e.g., 192.168.1.1, or a group of continuous IPs represented by IP mask, e.g., 192.168.0.0/24 (means 192.168.0.0 - 192.168.0.255) .</p>
 <p>For those slaves whose IPs are not in this list, they will be put into &quot;/0/0/.../0&quot; by default. Therefore you should avoid using &quot;/0/0/.../0&quot; in this list. Also, the level ID does not need to be continuous. </p>
 <div class="code">
-  #The topology is a hierachical structure. You may use single IP or IP range for the address.<br />
+  #The topology is a hierarchical structure. You may use single IP or IP range for the address.<br />
   # There may be multiple levels in the structure (e.g, data center and rack in 2-level structure)<br />
-  # Only digit is allowed to notate topology, starting with &quot;/&quot;.<br />
-  # All digits should be greate than 0. Do not use 0 and negative values, which are reserved for internal use.<br />
+  # Only digit is allowed to label topology, starting with &quot;/&quot;.<br />
+  # All digits should be greater than 0. Do not use 0 and negative values, which are reserved for internal use.<br />
   # All topology paths must have the same number of levels......<br />
   <br />
   192.168.136.0/26 &nbsp;&nbsp;&nbsp;&nbsp;/1/1<br />

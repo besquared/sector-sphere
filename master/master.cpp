@@ -2202,7 +2202,7 @@ void* Master::replica(void* s)
 
             SNode sn;
             self->m_pMetadata->lookup(src, sn);
-            if (sn.m_sLocation.size() > self->m_SysConfig.m_iReplicaNum)
+            if ((int)sn.m_sLocation.size() > self->m_SysConfig.m_iReplicaNum)
                continue;
 
             self->createReplica(src, dst);

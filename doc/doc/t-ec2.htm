@@ -15,11 +15,11 @@
 <p>By default,  EC2 instances only open TCP ports 22 and 80. You need to update your security group policy to open UDP ports (1024 - 65535) and specific TCP ports that the security server and the master server use.</p>
 <p><b>Choose an Existing Image</b></p>
 <p>You may choose an existing Sector EC2 image and start multiple instances from that image. Because each new instance may have a different IP address, you need to update the Sector configuration files (master.conf, slave.conf, and client.conf) with the new master IP address.</p>
-<p>The current Sector official EC2 image is <strong>ami-e2e0038b</strong>, which is created based on a CVS version  pre-1.25. Please check the Sector website for updates. When you start an instance with this image, the Sector code can be found in the /root directory and the data is stored in the /mnt directory. </p>
+<p>The current Sector official EC2 image is <strong>ami-e2e0038b</strong>, which is created based on a CVS version  pre-1.25. Please check the Sector web site for updates. When you start an instance with this image, the Sector code can be found in the /root directory and the data is stored in the /mnt directory. </p>
 <p><b>Creating Your Own Image </b></p>
-<p>You can create your own Sector image based on an existing Sector image or a clean Debian image. The advanatge of this approach is that you would not need to update the configuration files for each slave nodes.</p>
+<p>You can create your own Sector image based on an existing Sector image or a clean Debian image. The advantage of this approach is that you would not need to update the configuration files for each slave nodes.</p>
 <p>Step 1: start an EC2 instance from an existing Sector image or a Debian Linux image. If starting from Debian, you may need to do &quot;apt-get update; apt-get install libssl-dev&quot;.</p>
-<p>Step 2: copy the most recent version of Sector to the instance if necessary. Complie and configure the Sector installation, configure this instance as Sector security server and master server. </p>
+<p>Step 2: copy the most recent version of Sector to the instance if necessary. Compile and configure the Sector installation, configure this instance as Sector security server and master server. </p>
 <p>Step 3: make a new EC2 image and register it. </p>
 Step 4: start more instances from the new image created in Step 3 as Sector slaves.
 <p>&nbsp;</p>

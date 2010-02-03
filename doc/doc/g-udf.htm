@@ -17,8 +17,8 @@
 <h3><font color="#000080">How to Write a Sphere UDF </font></h3>
 <p>The Sphere user defined function is the routine that slaves will call for each   data segment. It must has the following format: </p>
 <div class="code">int _FUNCTION_(const SInput* input, SOutput* output, SFile*   file)</div>
-<p>Here _FUNCTION_ should be replaced by the real name of the data processing   function. This function should be compiled as a dynamic library file   _FUNCTION_.so. See the example Terasort processing functions (hash and sort) in   ./codeblue2/client/examples. Note that the function must be defined within   extern &quot;C&quot; {} because otherwise the function will not be located in the library   by its original name. </p>
-<p>The data structure SInput, SOutput, and SFile are defined in   ./common/sphere.h.</p>
+<p>Here _FUNCTION_ should be replaced by the real name of the data processing   function. This function should be compiled as a dynamic library file   _FUNCTION_.so. See the example Terasort processing functions (hash and sort) in   ./sector-sphere/examples. Note that the function must be defined within   extern &quot;C&quot; {} because otherwise the function will not be located in the library   by its original name. </p>
+<p>The data structure SInput, SOutput, and SFile are defined in   ./include/sphere.h.</p>
 
 <div class="code">
    struct SInput<br />
@@ -52,7 +52,7 @@ struct SOutput<br />
 <p>The result also needs an index, which should be written into &quot;m_pllIndex&quot;. Similar   to the result buffer described above, the physical size of the index structure   is defined in &quot;m_iIndSize&quot;, in the unit of number of rows. The actual number of rows of   result is written into &quot;m_iRows&quot;. </p>
 <p>The result buffer &quot;m_pcResult&quot; and its index structure &quot;m_pllIndex&quot; are pre-allocated. In case that they are not large enough to hold the result, SOutput.resizeResBuf and SOutput.resizeIndBuf should be used to increase the buffers.</p>
 <p>The bucket is the most tricky part in Sphere. In many cases you need to merge the   results from all segments into one or more result files for further processing.   This is quite similar to the reduce part in MapReduce. For example, when   building an inverted index, you may want to send all words starting with the   same letter to the same result file and then process that file to generate part   of the index. You can assign a bucket id for each output record and Sphere will   send records with the same ID to the same file. The total number of buckets is   specified by the output stream structure (see below), and the bucket ID for each   record must not exceed that number (otherwise the data will be discarded).</p>
-<p>If the function processes a file and the file is too large or the result   cannot be held in the output buffer, you can stop the current processing and set   the &quot;m_llOffset&quot; value at the current file possition. Sphere will call the   function again and the processing can be resumed from that position. When the   file is completely processed, the value of &quot;m_llOffset&quot; must be set to -1.</p>
+<p>If the function processes a file and the file is too large or the result   cannot be held in the output buffer, you can stop the current processing and set   the &quot;m_llOffset&quot; value at the current file position. Sphere will call the   function again and the processing can be resumed from that position. When the   file is completely processed, the value of &quot;m_llOffset&quot; must be set to -1.</p>
 
 <div class="code">
     struct SFile<br />
@@ -61,6 +61,7 @@ struct SOutput<br />
     &nbsp;&nbsp;std::string m_strLibDir; // the directory that stores   the library files available to the current process: constant <br />
     &nbsp;&nbsp;std::string   m_strTempDir; // the directory that can be used to store temporary files:   constant <br />
     &nbsp;&nbsp;std::set  &lt;std::string&gt; m_sstrFiles; // list of modified   files<br />
+	&nbsp;&nbsp;MOMgmt* m_pInMemoryObjects; // in-memory objects handler <br />
     };
 </div>
 

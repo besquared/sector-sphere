@@ -593,7 +593,7 @@ void* Slave::SPEShuffler(void* p)
       {
          // too many incoming results, ask the sender to wait
          // the receiver buffer size threshold is set to 256MB. This prevents the shuffler from being overflowed
-         // it also helps direct the traffic to less congested shuffer and leads to better load balance
+         // it also helps direct the traffic to less congested shuffler and leads to better load balance
          msg.setType(-msg.getType());
          gmp->sendto(speip, speport, msgid, &msg);
       }

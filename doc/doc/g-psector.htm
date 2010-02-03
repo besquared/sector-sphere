@@ -17,33 +17,38 @@
 <h3><font color="#000080">Programming with Sector API </font></h3>
 <p>Sector provides a set of APIs for applications to access the file system. </p>
 <p><strong>Prerequisite</strong></p>
-<p>To use Sector API, the application should include &lt;fsclient.h&gt;. In addition, certain header files in other directories (./common, ./gmp, and ./udt) may be required to be accessible. It is recommended that beginners write the first program in the same directory of the Sector client examples.</p>
+<p>To use Sector API, the application should include &lt;sector.h&gt;, located in ./sector-sphere/include. This is the only header file required. Developers can find example programs in ./sector-sphere/tools. The libraries to link with are located in ./sector-sphere/lib. </p>
 <p><strong>Connect the Master</strong></p>
 <p>The client needs to know the address of the master node (IP and PORT). The Sector client can then be initialized by the <a href="r-c-client-init.htm">init</a> call. After that, the user can login with the user name and password. This process is encrypted using SSL. The qualifier &quot;Sector&quot; is an alias to the Sector class &quot;Client&quot;. All the connection and login API are global functions and there is no need for any local variables. </p>
-<div class="code"> Sector::init(IP, PORT);<br />
-Sector::login(&quot;test&quot;, &quot;xxx&quot;);</div>
+<p>For each Sector system, at least one &quot;client&quot; variable of type &quot;Sector&quot; needs to be defined. It is possible to define multiple client variables to connect to multiple Sector systems. </p>
+<div class="code"> 
+Sector client; <br />
+client.init(IP, PORT);<br />
+client.login(&quot;test&quot;, &quot;xxx&quot;);</div>
 <p><strong>File System Operation</strong></p>
 <p>After a successful connection and login, the user may use certain APIs to access and manage the file system. Such APIs include ls, stat, rm, mkdir, and sysstat. For example, the following code piece shows how to read the information about a particular file. </p>
 
 <div class="code">
 string path = "test"; <br />
 SNode attr; <br />
-Sector::stat(path, attr);
+client.stat(path, attr);
 </div>
 
 <p><strong>File IO </strong></p>
 <p>In order to access a particular file, a file handler (SectorFile) must be declared. The application can then open the file and read/write it. This process is very similar to accessing a file in a traditional file system. </p>
+<p>The Sector file handler must be obtained via a client variable by calling its createSectorFile API. It also needs to be released by the same client variable as well (releaseSectorFile). </p>
 <div class="code">
-    SectorFile sf;<br>
+    SectorFile* sf = client.createSectorFile;<br>
     sf.open(path, mode);<br>
     sf.read(buffer, size);<br>
-    sf.close();
+    sf.close();<br>
+	client.releaseSectorFile(sf);
 </div>
 
 <p><strong>Disconnect and Logout the System </strong></p>
 <p>When the application does not need to access Sector any more, it should logout the user and disconnect from the system. </p>
-<div class="code"> Sector::logout();<br />
-Sector::close();<br />
+<div class="code"> client.logout();<br />
+client.close();<br />
 </div>
 </body>
 </html>

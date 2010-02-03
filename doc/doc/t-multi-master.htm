@@ -13,7 +13,7 @@
 <p>For better availability and to serve more clients, more master servers can be started. A new master server can be started at any time. However, it is recommended that the new server is started   when no client connects to the system, otherwise client requests may experience short delay due to the reorganization of the Sector masters. </p>
 
 <p><b>master.conf</b></p>
-<p>The configuration file of the new master must be consistent to those existing masters. In particular, the number of replicas should be the same as other masters. It is recommended to have exactly one security server in the system. However, a master server may specify a different security server if necessary. In this case, the configuration files of the security servers must be the same. </p>
+<p>The configuration file of the new master must be consistent to those existing masters. In particular, the number of replicas should be the same as other masters. It is recommended to have exactly one security server in the system. However, a master server may specify a different security server if necessary. In this case, the configuration files on different security servers (user accounts, access control lists, etc.) must be synchronized. </p>
 <p><strong>topology.conf </strong></p>
 <p>Copy the &quot;topology.conf&quot; file from an existing master server to the ./conf directory of the new master server, if there is one. </p>
 <p><strong>slaves.list</strong></p>
@@ -21,6 +21,6 @@
 <p><strong>master_node.key/cert</strong></p>
 <p>Copy the master key/certificate files of an existing master server to the ./conf directory of the new master server. Do NOT generate a new set of key/certificate pair for the new master. </p>
 <p><strong></strong></p>
-<p>Now, to start the new master, simply run <strong>./start_master IP port</strong>, where <em>IP</em> and <em>port</em> is the address of an existing master server. </p>
+<p>Now, to start the new master, simply run <strong>./start_master IP port</strong>, where <em>IP</em> and <em>port</em> is the address of an existing master server. All Sector masters are active. They automatically synchronize file system changes and serve clients simultaneously. </p>
 </body>
 </html>
