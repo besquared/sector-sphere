@@ -984,7 +984,7 @@ int DCClient::connectSPE(SPE& s)
 
    s.m_iStatus = 1;
 
-   return 1;
+   return 0;
 }
 
 int DCClient::segmentData()
@@ -1281,5 +1281,5 @@ int DCClient::readResult(SPE* s)
    pthread_cond_signal(&m_ResCond);
    pthread_mutex_unlock(&m_ResLock);
 
-   return 1;
+   return 0;
 }

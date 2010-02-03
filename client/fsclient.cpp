@@ -291,7 +291,7 @@ int FSClient::download(const char* localpath, const bool& cont)
 
    ofs.close();
 
-   return 1;
+   return realsize;
 }
 
 int FSClient::upload(const char* localpath, const bool& cont)
@@ -337,7 +337,7 @@ int FSClient::upload(const char* localpath, const bool& cont)
 
    ifs.close();
 
-   return 1;
+   return size;
 }
 
 int FSClient::close()
@@ -356,7 +356,7 @@ int FSClient::close()
    if (m_bWrite)
       m_pClient->m_StatCache.remove(m_strFileName);
 
-   return 1;
+   return 0;
 }
 
 int FSClient::seekp(int64_t off, int pos)
@@ -384,7 +384,7 @@ int FSClient::seekp(int64_t off, int pos)
       break;
    }
 
-   return 1;
+   return pos;
 }
 
 int FSClient::seekg(int64_t off, int pos)
@@ -412,7 +412,7 @@ int FSClient::seekg(int64_t off, int pos)
       break;
    }
 
-   return 1;
+   return pos;
 }
 
 int64_t FSClient::tellp()

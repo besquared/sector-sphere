@@ -48,17 +48,108 @@
     <td>total number of slaves </td>
   </tr>
   <tr>
+    <td>m_vMasterList</td>
+    <td>vector&lt;Address&gt;</td>
+    <td>the list of masters </td>
+  </tr>
+  <tr>
     <td>m_vSlaveList</td>
-    <td>vector&lt;SlaveNode&gt;</td>
+    <td>vector&lt;SlaveStat&gt;</td>
     <td>the list of slaves </td>
   </tr>
   <tr>
     <td>m_vCluster</td>
-    <td>vector&lt;Cluster&gt;</td>
-    <td>the list of clusters (topology) </td>
+    <td>vector&lt;ClusterStat&gt;</td>
+    <td>the list of clusters (first level on the topology only) </td>
   </tr>
 </table>
-<h5><strong>Class Interfaces</strong></h5>
+<h5>Class SysStat::SlaveStat Members </h5>
+<table width="100%" border="1" cellpadding="1" cellspacing="0" bordercolor="#CCCCCC">
+  <tr>
+    <td width="12%" class="table_headline"><strong>Member</strong></td>
+    <td width="13%" class="table_headline"><strong>Type</strong></td>
+    <td width="75%" class="table_headline"><strong>Description</strong></td>
+  </tr>
+  <tr>
+    <td><a href="r-t-download.html"></a> m_strIP </td>
+    <td>string</td>
+    <td>slave IP address </td>
+  </tr>
+  <tr>
+    <td>m_llTimeStamp</td>
+    <td>int64_t</td>
+    <td>last update time </td>
+  </tr>
+  <tr>
+    <td>m_llAvailDiskSpace</td>
+    <td>int64_t</td>
+    <td>total available disk space </td>
+  </tr>
+  <tr>
+    <td>m_llTotalFileSize</td>
+    <td>int64_t</td>
+    <td>total file size on this node </td>
+  </tr>
+  <tr>
+    <td>m_llCurrMemUsed</td>
+    <td>int64_t</td>
+    <td>physical memory used by this slave </td>
+  </tr>
+  <tr>
+    <td>m_llCurrCPUUsed</td>
+    <td>int64_t</td>
+    <td>CPU time used by this slave (aggregate since start) </td>
+  </tr>
+  <tr>
+    <td>m_llTotalInputData</td>
+    <td>int64_t</td>
+    <td>total network input data size </td>
+  </tr>
+  <tr>
+    <td>m_llTotalOutputData</td>
+    <td>int64_t</td>
+    <td>total network output data size </td>
+  </tr>
+</table>
+<h5>Class SysStat::ClusterStat Members </h5>
+<table width="100%" border="1" cellpadding="1" cellspacing="0" bordercolor="#CCCCCC">
+  <tr>
+    <td width="12%" class="table_headline"><strong>Member</strong></td>
+    <td width="13%" class="table_headline"><strong>Type</strong></td>
+    <td width="75%" class="table_headline"><strong>Description</strong></td>
+  </tr>
+  <tr>
+    <td><a href="r-t-download.html"></a> m_iCusterID </td>
+    <td>int</td>
+    <td>cluster ID </td>
+  </tr>
+  <tr>
+    <td>m_iTotalNodes</td>
+    <td>int</td>
+    <td>total number of nodes in this cluster </td>
+  </tr>
+  <tr>
+    <td>m_llAvailDiskSpace</td>
+    <td>int64_t</td>
+    <td>total available disk space </td>
+  </tr>
+  <tr>
+    <td>m_llTotalFileSize</td>
+    <td>int64_t</td>
+    <td>total file size on this node </td>
+  </tr>
+  <tr>
+    <td>m_llTotalInputData</td>
+    <td>int64_t</td>
+    <td>total network input data size </td>
+  </tr>
+  <tr>
+    <td>m_llTotalOutputData</td>
+    <td>int64_t</td>
+    <td>total network output data size </td>
+  </tr>
+</table>
+<p><strong>Class Interfaces</strong></p>
 <p>There is no public interface for this class. </p>
 <p>&nbsp;</p>
 </body>

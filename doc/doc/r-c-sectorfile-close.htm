@@ -4,14 +4,6 @@
 <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
 <title>Sector/Sphere Manual</title>
 <link rel="stylesheet" href="sectordoc.css" type="text/css" />
-<style type="text/css">
-<!--
-.style1 {
-	color: #FFFFFF;
-	font-weight: bold;
-}
--->
-</style>
 </head>
 
 <body>
@@ -30,7 +22,7 @@
 <p>None.</p>
 
 <h5>Return Value</h5>
-<p>On success, the function returns 1. If error occurs, a negative value is returned. </p>
+<p>On success, the function returns 0. If error occurs, a negative value is returned. </p>
 <table width="100%" border="1" cellpadding="2" cellspacing="0" bordercolor="#CCCCCC">
   <tr>
     <td width="17%" class="table_headline"><strong>Error Name</strong></td>
@@ -44,7 +36,7 @@
   </tr>
 </table>
 <h5>Description</h5>
-<p>&nbsp;</p>
+<p>The <strong>close</strong> function releases the Sector file and makes it ready to <a href="r-c-sectorfile-open.htm">open</a> another file. To release the pointer/handle itself, use <a href="r-c-client.htm">Sector</a>::<a href="r-c-client-releasesf.htm">releaseSectorFile</a>. </p>
 <h5><strong>See Also</strong></h5>
 <p><strong><a href="r-c-sectorfile-open.htm">open</a></strong></p>
 <p>&nbsp;</p>
