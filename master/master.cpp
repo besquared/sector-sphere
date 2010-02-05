@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 01/20/2010
+   Yunhong Gu, last updated 02/05/2010
 *****************************************************************************/
 
 #include <common.h>
@@ -2340,14 +2340,14 @@ void Master::loadSlaveAddr(const string& file)
 
 int Master::serializeSysStat(char*& buf, int& size)
 {
-   *(int64_t*)buf = m_llStartTime;
-   *(int64_t*)(buf + 8) = m_SlaveManager.getTotalDiskSpace();
-   *(int64_t*)(buf + 16) = m_SlaveManager.getTotalSlaves();
-   *(int64_t*)(buf + 24) = m_pMetadata->getTotalDataSize("/");
-   *(int64_t*)(buf + 32) = m_pMetadata->getTotalFileNum("/");
-
    size = 52 + m_SlaveManager.m_Cluster.m_mSubCluster.size() * 48 + m_Routing.m_mAddressList.size() * 20 + m_SlaveManager.m_mSlaveList.size() * 72;
    buf = new char[size];
+
+   *(int64_t*)buf = m_llStartTime;
+   *(int64_t*)(buf + 8) = m_SlaveManager.getTotalDiskSpace();
+   *(int64_t*)(buf + 16) = m_pMetadata->getTotalDataSize("/");
+   *(int64_t*)(buf + 24) = m_pMetadata->getTotalFileNum("/");
+   *(int64_t*)(buf + 32) = m_SlaveManager.getTotalSlaves();
 
    char* p = buf + 40;
    *(int32_t*)p = m_SlaveManager.m_Cluster.m_mSubCluster.size();

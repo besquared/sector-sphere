@@ -713,8 +713,8 @@ void* Slave::SPEShufflerEx(void* p)
          if (self->m_DataChn.recv(speip, dataport, session, tmp, len) < 0)
             continue;
          int64_t* index = (int64_t*)tmp;
-         for (int i = 0; i < len / 8; ++ i)
-            index[i] += start;
+         for (int j = 0; j < len / 8; ++ j)
+            index[j] += start;
          offset[bucket] = index[len / 8 - 1];
          indexfile.write(tmp, len);
          delete [] tmp;

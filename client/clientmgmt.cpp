@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 01/30/2010
+   Yunhong Gu, last updated 02/03/2010
 *****************************************************************************/
 
 #include <sector.h>
@@ -487,7 +487,7 @@ int SphereProcess::loadOperator(const char* library)
    if (NULL == d)
       return SectorError::E_INVALID;
 
-   return d->close();
+   return d->loadOperator(library);
 }
 
 int SphereProcess::run(const SphereStream& input, SphereStream& output, const string& op, const int& rows, const char* param, const int& size, const int& type)
