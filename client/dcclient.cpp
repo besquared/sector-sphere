@@ -75,10 +75,6 @@ m_llStart(0),
 m_llEnd(-1),
 m_iStatus(0)
 {
-   m_vFiles.clear();
-   m_vRecNum.clear();
-   m_vSize.clear();
-   m_vLocation.clear();
 }
 
 SphereStream::~SphereStream()
@@ -104,10 +100,14 @@ int SphereStream::init(const int& num)
    if (num <= 0)
       return 0;
 
-   m_vLocation.resize(num);
+   m_vFiles.clear();
    m_vFiles.resize(num);
+   m_vSize.clear();
    m_vSize.resize(num);
+   m_vRecNum.clear();
    m_vRecNum.resize(num);
+   m_vLocation.clear();
+   m_vLocation.resize(num);
 
    m_piLocID = new int32_t[num];
 
@@ -834,10 +834,15 @@ int DCClient::prepareInput()
 
    m_pInput->m_iStatus = -1;
 
+   m_pInput->m_vFiles.clear();
    m_pInput->m_vFiles.resize(m_pInput->m_iFileNum);
+   m_pInput->m_vSize.clear();
    m_pInput->m_vSize.resize(m_pInput->m_iFileNum);
+   m_pInput->m_vRecNum.clear();
    m_pInput->m_vRecNum.resize(m_pInput->m_iFileNum);
+   m_pInput->m_vLocation.clear();
    m_pInput->m_vLocation.resize(m_pInput->m_iFileNum);
+
    vector<string>::iterator f = m_pInput->m_vFiles.begin();
    vector<int64_t>::iterator s = m_pInput->m_vSize.begin();
    vector<int64_t>::iterator r = m_pInput->m_vRecNum.begin();

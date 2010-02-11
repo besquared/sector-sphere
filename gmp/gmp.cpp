@@ -739,7 +739,6 @@ DWORD WINAPI CGMP::rcvHandler(LPVOID s)
          continue;
       }
 
-      // check repeated ID!!!!
       #ifndef WIN32
          char ip[64];
          if (NULL == inet_ntop(AF_INET, &(addr.sin_addr), ip, 64))

@@ -87,6 +87,8 @@ void CPeerManagement::insert(const string& ip, const int& port, const int& sessi
    pr->m_iPort = port;
    pr->m_iSession = session;
    pr->m_iID = id;
+   pr->m_llTimeStamp = CTimer::getTime();
+   pr->m_iFlowWindow = fw;
 
    //insert the message record to the recent records list, so to avoid repeated messages
    addRecentPR(*pr);
@@ -112,9 +114,6 @@ void CPeerManagement::insert(const string& ip, const int& port, const int& sessi
          pr->m_iID = id;
       else
          pr->m_iID = -1;
-
-      pr->m_llTimeStamp = CTimer::getTime();
-      pr->m_iFlowWindow = fw;
 
       m_sPeerRec.insert(pr);
       m_sPeerRecByTS.insert(pr);
