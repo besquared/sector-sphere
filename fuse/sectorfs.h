@@ -3,9 +3,8 @@
 
 #define FUSE_USE_VERSION 26
 
-#include <fsclient.h>
-#include <util.h>
-
+#include <sector.h>
+#include <conf.h>
 #include <fuse.h>
 #include <fuse/fuse_opt.h>
 #include <stdio.h>

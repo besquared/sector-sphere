@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
    sector_ops.access = SectorFS::access;
 
 
-   SectorFS::g_SectorConfig.loadInfo("../../conf/client.conf");
+   SectorFS::g_SectorConfig.loadInfo("../conf/client.conf");
 
 
    return fuse_main(argc, argv, &sector_ops, NULL);

@@ -1,5 +1,4 @@
 #include <sectorfs.h>
-#include <util.h>
 #include <fstream>
 #include <iostream>
 
@@ -36,7 +35,7 @@ int SectorFS::getattr(const char* path, struct stat* st)
    if (s.m_bIsDir)
       st->st_mode = S_IFDIR | 0755;
    else
-      st->st_mode = S_IFREG | 0444;
+      st->st_mode = S_IFREG | 0755;
    st->st_nlink = 1;
    st->st_uid = 0;
    st->st_gid = 0;
@@ -138,7 +137,7 @@ int SectorFS::readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t
       if (i->m_bIsDir)
          st.st_mode = S_IFDIR | 0755;
       else
-         st.st_mode = S_IFREG | 0444;
+         st.st_mode = S_IFREG | 0755;
       st.st_nlink = 1;
       st.st_uid = 0;
       st.st_gid = 0;

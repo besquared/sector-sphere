@@ -570,7 +570,7 @@ DWORD WINAPI CGMP::sndHandler(LPVOID s)
          WaitForSingleObject(self->m_SndQueueCond, 1000);
       #endif
 
-      vector<CMsgRecord> udtsend;
+      vector<CMsgRecord*> udtsend;
       udtsend.clear();
 
       #ifndef WIN32
@@ -579,28 +579,23 @@ DWORD WINAPI CGMP::sndHandler(LPVOID s)
          WaitForSingleObject(self->m_SndQueueLock, INFINITE);
       #endif
 
+      int64_t ts = CTimer::getTime();
+
       for (list<CMsgRecord*>::iterator i = self->m_lSndQueue.begin(); i != self->m_lSndQueue.end();)
       {
-         if (CTimer::getTime() - (*i)->m_llTimeStamp > 10 * 1000000)
+         int64_t diff = ts - (*i)->m_llTimeStamp;
+
+         if (diff > 10 * 1000000)
          {
             // timeout, send with UDT...
             list<CMsgRecord*>::iterator j = i;
             i ++;
-
-            CMsgRecord rec;
-            rec.m_strIP = (*j)->m_strIP;
-            rec.m_iPort = (*j)->m_iPort;
-            rec.m_pMsg = new CGMPMessage(*((*j)->m_pMsg));
-            udtsend.insert(udtsend.end(), rec);
-
-            delete (*j)->m_pMsg;
-            delete (*j);
+            udtsend.push_back(*j);
             self->m_lSndQueue.erase(j);
-
             continue;
          }
-
-         self->UDPsend((*i)->m_strIP.c_str(), (*i)->m_iPort, (*i)->m_pMsg);
+         else if (diff > 1000000)
+            self->UDPsend((*i)->m_strIP.c_str(), (*i)->m_iPort, (*i)->m_pMsg);
 
          // check next msg
          ++ i;
@@ -612,10 +607,11 @@ DWORD WINAPI CGMP::sndHandler(LPVOID s)
          ReleaseMutex(self->m_SndQueueLock);
       #endif
 
-      for (vector<CMsgRecord>::iterator i = udtsend.begin(); i != udtsend.end(); ++ i)
+      for (vector<CMsgRecord*>::iterator i = udtsend.begin(); i != udtsend.end(); ++ i)
       {
-         self->UDTsend(i->m_strIP.c_str(), i->m_iPort, i->m_pMsg);
-         delete i->m_pMsg;
+         self->UDTsend((*i)->m_strIP.c_str(), (*i)->m_iPort, (*i)->m_pMsg);
+         delete (*i)->m_pMsg;
+         delete (*i);
       }
       udtsend.clear();
    }
