@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright (c) 2005 - 2009, The Board of Trustees of the University of Illinois.
+Copyright (c) 2005 - 2010, The Board of Trustees of the University of Illinois.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 09/17/2009
+   Yunhong Gu, last updated 02/10/2010
 *****************************************************************************/
 
 #ifndef WIN32
@@ -58,9 +58,6 @@ CPeerManagement::CPeerManagement()
    #else
       m_PeerRecLock = CreateMutex(NULL, false, NULL);
    #endif
-
-   int n = 1 << m_uiHashSpace;
-   m_pHashRec = new CPeerRecord [n];
 }
 
 CPeerManagement::~CPeerManagement()
@@ -70,8 +67,6 @@ CPeerManagement::~CPeerManagement()
    #else
       CloseHandle(m_PeerRecLock);
    #endif
-
-   delete [] m_pHashRec;
 }
 
 void CPeerManagement::insert(const string& ip, const int& port, const int& session, const int32_t& id, const int& rtt, const int& fw)
@@ -93,8 +88,8 @@ void CPeerManagement::insert(const string& ip, const int& port, const int& sessi
    pr->m_iSession = session;
    pr->m_iID = id;
 
-   int key = hash(ip, port, session, id);
-   m_pHashRec[key] = *pr;
+   //insert the message record to the recent records list, so to avoid repeated messages
+   addRecentPR(*pr);
 
    set<CPeerRecord*, CFPeerRec>::iterator i = m_sPeerRec.find(pr);
    map<string, int>::iterator t = m_mRTT.find(ip);
@@ -162,22 +157,6 @@ int CPeerManagement::getRTT(const string& ip)
    return -1;
 }
 
-int CPeerManagement::getLastID(const string& ip, const int& port, const int& session)
-{
-   CPeerRecord pr;
-   pr.m_strIP = ip;
-   pr.m_iPort = port;
-   pr.m_iSession = session;
-
-   CGuard recguard(m_PeerRecLock);
-
-   set<CPeerRecord*, CFPeerRec>::iterator i = m_sPeerRec.find(&pr);
-   if (i != m_sPeerRec.end())
-      return (*i)->m_iID;
-
-   return -1;
-}
-
 void CPeerManagement::clearRTT(const string& ip)
 {
    CGuard recguard(m_PeerRecLock);
@@ -222,10 +201,46 @@ int32_t CPeerManagement::hash(const string& ip, const int& port, const int& sess
    return DHash::hash(tmp, m_uiHashSpace);
 }
 
+int CPeerManagement::addRecentPR(const CPeerRecord& pr)
+{
+   int key = hash(pr.m_strIP, pr.m_iPort, pr.m_iSession, pr.m_iID);
+   map<int, list<CPeerRecord> >::iterator i = m_mRecentRec.find(key);
+   if (i == m_mRecentRec.end())
+   {
+      m_mRecentRec[key].clear();
+      m_mRecentRec[key].push_back(pr);
+   }
+   else
+   {
+      int64_t ts = CTimer::getTime();
+      while (!i->second.empty())
+      {
+         CPeerRecord& p = i->second.front();
+         if (ts - p.m_llTimeStamp < 10 * 1000000)
+            break;
+         i->second.erase(i->second.begin());
+      }
+      i->second.push_back(pr);
+   }
+
+   return 0;
+}
+
 bool CPeerManagement::hit(const string& ip, const int& port, const int& session, const int32_t& id)
 {
-   int key = hash(ip, port, session, id);
-   CPeerRecord* pr = m_pHashRec + key;
+   CGuard recguard(m_PeerRecLock);
 
-   return (ip == pr->m_strIP) && (port == pr->m_iPort) && (session == pr->m_iSession) && (id == pr->m_iID);
+   int key = hash(ip, port, session, id);
+
+   map<int, list<CPeerRecord> >::iterator i = m_mRecentRec.find(key);
+   if (i != m_mRecentRec.end())
+   {
+      for (list<CPeerRecord>::iterator pr = i->second.begin(); pr != i->second.end(); ++ pr)
+      {
+         if ((ip == pr->m_strIP) && (port == pr->m_iPort) && (session == pr->m_iSession) && (id == pr->m_iID))
+            return true;
+      }
+   }
+
+   return false;
 }

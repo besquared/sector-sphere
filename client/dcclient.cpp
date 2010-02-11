@@ -375,7 +375,7 @@ void* DCClient::run(void* param)
       if (0 == self->checkSPE())
          break;
 
-      char ip[64];
+      string ip;
       int port;
       int tmp;
       SectorMsg msg;
@@ -452,7 +452,7 @@ void* DCClient::run(void* param)
    //TODO: need to detect lost slaves
    while (self->checkBucket() > 0)
    {
-      char ip[64];
+      string ip;
       int port;
       int tmp;
       SectorMsg msg;

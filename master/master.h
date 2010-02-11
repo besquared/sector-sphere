@@ -94,16 +94,16 @@ private:
 
    static void* process(void* s);
 
-   int processSysCmd(const char* ip, const int port,  const ActiveUser* user, const int32_t key, int id, SectorMsg* msg);
-   int processFSCmd(const char* ip, const int port,  const ActiveUser* user, const int32_t key, int id, SectorMsg* msg);
-   int processDCCmd(const char* ip, const int port,  const ActiveUser* user, const int32_t key, int id, SectorMsg* msg);
-   int processMCmd(const char* ip, const int port,  const ActiveUser* user, const int32_t key, int id, SectorMsg* msg);
+   int processSysCmd(const std::string& ip, const int port,  const ActiveUser* user, const int32_t key, int id, SectorMsg* msg);
+   int processFSCmd(const std::string& ip, const int port,  const ActiveUser* user, const int32_t key, int id, SectorMsg* msg);
+   int processDCCmd(const std::string& ip, const int port,  const ActiveUser* user, const int32_t key, int id, SectorMsg* msg);
+   int processMCmd(const std::string& ip, const int port,  const ActiveUser* user, const int32_t key, int id, SectorMsg* msg);
 
    int sync(const char* fileinfo, const int& size, const int& type);
-   int processSyncCmd(const char* ip, const int port,  const ActiveUser* user, const int32_t key, int id, SectorMsg* msg);
+   int processSyncCmd(const std::string& ip, const int port,  const ActiveUser* user, const int32_t key, int id, SectorMsg* msg);
 
 private:
-   inline void reject(const char* ip, const int port, int id, int32_t code);
+   inline void reject(const std::string& ip, const int port, int id, int32_t code);
 
 private:
    static void* replica(void* s);

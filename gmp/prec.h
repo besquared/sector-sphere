@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright (c) 2005 - 2009, The Board of Trustees of the University of Illinois.
+Copyright (c) 2005 - 2010, The Board of Trustees of the University of Illinois.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 09/17/2009
+   Yunhong Gu, last updated 02/10/2010
 *****************************************************************************/
 
 
@@ -51,6 +51,7 @@ written by
 
 #include <set>
 #include <map>
+#include <list>
 #include <string>
 
 struct CPeerRecord
@@ -105,7 +106,6 @@ public:
 public:
    void insert(const std::string& ip, const int& port, const int& session, const int32_t& id = -1, const int& rtt = -1, const int& fw = 0);
    int getRTT(const std::string& ip);
-   int getLastID(const std::string& ip, const int& port, const int& session);
    void clearRTT(const std::string& ip);
    int flowControl(const std::string& ip, const int& port, const int& session);
 
@@ -113,12 +113,15 @@ public:
    bool hit(const std::string& ip, const int& port, const int& session, const int32_t& id);
 
 private:
+   int addRecentPR(const CPeerRecord& pr);
+
+private:
    std::set<CPeerRecord*, CFPeerRec> m_sPeerRec;
    std::set<CPeerRecord*, CFPeerRecByTS> m_sPeerRecByTS;
    std::map<std::string, int> m_mRTT;
 
    static const unsigned int m_uiHashSpace = 20;
-   CPeerRecord* m_pHashRec;
+   std::map<int, std::list<CPeerRecord> > m_mRecentRec;
 
    pthread_mutex_t m_PeerRecLock;
 

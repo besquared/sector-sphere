@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 01/16/2010
+   Yunhong Gu, last updated 02/08/2010
 *****************************************************************************/
 
 
@@ -283,12 +283,12 @@ int CGMP::getPort()
    return m_iPort;
 }
 
-int CGMP::sendto(const char* ip, const int& port, int32_t& id, const CUserMessage* msg)
+int CGMP::sendto(const string& ip, const int& port, int32_t& id, const CUserMessage* msg)
 {
    if (msg->m_iDataLength <= m_iMaxUDPMsgSize)
-      return UDPsend(ip, port, id, msg->m_pcBuffer, msg->m_iDataLength, true);
+      return UDPsend(ip.c_str(), port, id, msg->m_pcBuffer, msg->m_iDataLength, true);
    else
-      return UDTsend(ip, port - 1, id, msg->m_pcBuffer, msg->m_iDataLength);
+      return UDTsend(ip.c_str(), port - 1, id, msg->m_pcBuffer, msg->m_iDataLength);
 }
 
 int CGMP::UDPsend(const char* ip, const int& port, int32_t& id, const char* data, const int& len, const bool& reliable)
@@ -306,7 +306,7 @@ int CGMP::UDPsend(const char* ip, const int& port, int32_t& id, const char* data
    if (reliable)
    {
       CMsgRecord* rec = new CMsgRecord;
-      strcpy(rec->m_pcIP, ip);
+      rec->m_strIP = ip;
       rec->m_iPort = port;
       rec->m_pMsg = msg;
       rec->m_llTimeStamp = CTimer::getTime();
@@ -416,7 +416,7 @@ int CGMP::UDTsend(const char* ip, const int& port, CGMPMessage* msg)
    return 16 + msg->m_iLength;
 }
 
-int CGMP::recvfrom(char* ip, int& port, int32_t& id, CUserMessage* msg, const bool& block)
+int CGMP::recvfrom(string& ip, int& port, int32_t& id, CUserMessage* msg, const bool& block)
 {
    bool timeout = false;
 
@@ -473,7 +473,7 @@ int CGMP::recvfrom(char* ip, int& port, int32_t& id, CUserMessage* msg, const bo
       ReleaseMutex(m_RcvQueueLock);
    #endif
 
-   strcpy(ip, rec->m_pcIP);
+   ip = rec->m_strIP;
    port = rec->m_iPort;
    id = rec->m_pMsg->m_iID;
 
@@ -588,7 +588,7 @@ DWORD WINAPI CGMP::sndHandler(LPVOID s)
             i ++;
 
             CMsgRecord rec;
-            strcpy(rec.m_pcIP, (*j)->m_pcIP);
+            rec.m_strIP = (*j)->m_strIP;
             rec.m_iPort = (*j)->m_iPort;
             rec.m_pMsg = new CGMPMessage(*((*j)->m_pMsg));
             udtsend.insert(udtsend.end(), rec);
@@ -600,7 +600,7 @@ DWORD WINAPI CGMP::sndHandler(LPVOID s)
             continue;
          }
 
-         self->UDPsend((*i)->m_pcIP, (*i)->m_iPort, (*i)->m_pMsg);
+         self->UDPsend((*i)->m_strIP.c_str(), (*i)->m_iPort, (*i)->m_pMsg);
 
          // check next msg
          ++ i;
@@ -614,7 +614,7 @@ DWORD WINAPI CGMP::sndHandler(LPVOID s)
 
       for (vector<CMsgRecord>::iterator i = udtsend.begin(); i != udtsend.end(); ++ i)
       {
-         self->UDTsend(i->m_pcIP, i->m_iPort, i->m_pMsg);
+         self->UDTsend(i->m_strIP.c_str(), i->m_iPort, i->m_pMsg);
          delete i->m_pMsg;
       }
       udtsend.clear();
@@ -768,25 +768,7 @@ DWORD WINAPI CGMP::rcvHandler(LPVOID s)
       }
 
       CMsgRecord* rec = new CMsgRecord;
-
-      #ifndef WIN32
-         if (NULL == inet_ntop(AF_INET, &(addr.sin_addr), rec->m_pcIP, 64))
-         {
-            perror("inet_ntop");
-            delete rec;
-            continue;
-         }
-      #else
-         char* tmp;
-         if (NULL == (tmp = inet_ntoa(addr.sin_addr)))
-         {
-            //perror("inet_ntop");
-            delete rec;
-            continue;
-         }
-         strncpy(rec->m_pcIP, tmp, 64);
-      #endif
-
+      rec->m_strIP = ip;
       rec->m_iPort = ntohs(addr.sin_port);
       rec->m_pMsg = new CGMPMessage;
       //rec->m_pMsg->m_iType = type;
@@ -797,7 +779,7 @@ DWORD WINAPI CGMP::rcvHandler(LPVOID s)
       rec->m_pMsg->m_pcData = new char[rec->m_pMsg->m_iLength];
       memcpy(rec->m_pMsg->m_pcData, buf, rec->m_pMsg->m_iLength);
 
-      self->m_PeerHistory.insert(rec->m_pcIP, rec->m_iPort, session, id);
+      self->m_PeerHistory.insert(rec->m_strIP, rec->m_iPort, session, id);
 
       int qsize = 0;
 
@@ -883,13 +865,14 @@ DWORD WINAPI CGMP::udtRcvHandler(LPVOID s)
       CMsgRecord* rec = new CMsgRecord;
 
       #ifndef WIN32
-         inet_ntop(AF_INET, &(addr.sin_addr), rec->m_pcIP, 64);
+         char tmp[64];
+         inet_ntop(AF_INET, &(addr.sin_addr), tmp, 64);
       #else
          char* tmp = inet_ntoa(addr.sin_addr);
-         strncpy(rec->m_pcIP, tmp, 64);
       #endif
 
-      rec->m_iPort = port;
+      rec->m_strIP = tmp;
+      rec->m_iPort = ntohs(port);
       rec->m_pMsg = new CGMPMessage;
       //rec->m_pMsg->m_iType = type;
       rec->m_pMsg->m_iSession = header[1];
@@ -917,7 +900,10 @@ DWORD WINAPI CGMP::udtRcvHandler(LPVOID s)
 
       t.close();
 
-      self->m_PeerHistory.insert(rec->m_pcIP, rec->m_iPort, header[1], header[2]);
+      if (self->m_PeerHistory.hit(rec->m_strIP, rec->m_iPort, rec->m_pMsg->m_iSession, rec->m_pMsg->m_iID))
+         continue;
+
+      self->m_PeerHistory.insert(rec->m_strIP, rec->m_iPort, rec->m_pMsg->m_iSession, rec->m_pMsg->m_iID);
 
       if (0 == header[3])
       {
@@ -960,7 +946,7 @@ DWORD WINAPI CGMP::udtRcvHandler(LPVOID s)
    return NULL;
 }
 
-int CGMP::rpc(const char* ip, const int& port, CUserMessage* req, CUserMessage* res)
+int CGMP::rpc(const string& ip, const int& port, CUserMessage* req, CUserMessage* res)
 {
    int32_t id = 0;
    if (sendto(ip, port, id, req) < 0)
@@ -985,14 +971,14 @@ int CGMP::rpc(const char* ip, const int& port, CUserMessage* req, CUserMessage* 
    return 0;
 }
 
-int CGMP::multi_rpc(const vector<char*>& ips, const vector<int>& ports, CUserMessage* req)
+int CGMP::multi_rpc(const vector<string>& ips, const vector<int>& ports, CUserMessage* req)
 {
    if (ips.size() != ports.size())
       return -1;
 
    CUserMessage msg;
 
-   map<int, char*> waiting1;
+   map<int, string> waiting1;
    map<int, int> waiting2;
    int32_t id = 0;
 
@@ -1030,7 +1016,7 @@ int CGMP::multi_rpc(const vector<char*>& ips, const vector<int>& ports, CUserMes
    return 0;
 }
 
-int CGMP::rtt(const char* ip, const int& port, const bool& clear)
+int CGMP::rtt(const string& ip, const int& port, const bool& clear)
 {
    if (!clear)
    {
@@ -1044,14 +1030,14 @@ int CGMP::rtt(const char* ip, const int& port, const bool& clear)
    CGMPMessage* msg = new CGMPMessage;
    msg->pack(2, 0);
 
-   if (UDPsend(ip, port, msg) < 0)
+   if (UDPsend(ip.c_str(), port, msg) < 0)
    {
       delete msg;
       return -1;
    }
 
    CMsgRecord* rec = new CMsgRecord;
-   strcpy(rec->m_pcIP, ip);
+   rec->m_strIP = ip;
    rec->m_iPort = port;
    rec->m_pMsg = msg;
    rec->m_llTimeStamp = CTimer::getTime();

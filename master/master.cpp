@@ -990,7 +990,7 @@ void* Master::process(void* s)
 {
    Master* self = (Master*)s;
 
-   char ip[64];
+   string ip;
    int port;
    int32_t id;
    SectorMsg* msg = new SectorMsg;
@@ -1069,7 +1069,7 @@ void* Master::process(void* s)
    return NULL;
 }
 
-int Master::processSysCmd(const char* ip, const int port, const ActiveUser* user, const int32_t key, int id, SectorMsg* msg)
+int Master::processSysCmd(const string& ip, const int port, const ActiveUser* user, const int32_t key, int id, SectorMsg* msg)
 {
    // internal system commands
 
@@ -1113,7 +1113,7 @@ int Master::processSysCmd(const char* ip, const int port, const ActiveUser* user
       // send file changes to all other masters
       SectorMsg newmsg;
       newmsg.setData(0, (char*)&change, 4);
-      newmsg.setData(4, ip, 64);
+      newmsg.setData(4, ip.c_str(), 64);
       newmsg.setData(68, (char*)&port, 4);
       newmsg.setData(72, msg->getData() + 12, msg->m_iDataLength - 12);
       sync(newmsg.getData(), newmsg.m_iDataLength, 1100);
@@ -1143,7 +1143,7 @@ int Master::processSysCmd(const char* ip, const int port, const ActiveUser* user
    case 2: // client logout
    {
       char text[128];
-      sprintf(text, "User %s logout from %s.", user->m_strName.c_str(), ip);
+      sprintf(text, "User %s logout from %s.", user->m_strName.c_str(), ip.c_str());
       m_SectorLog.insert(text);
 
       m_mActiveUser.erase(key);
@@ -1268,7 +1268,7 @@ int Master::processSysCmd(const char* ip, const int port, const ActiveUser* user
    return 0;
 }
 
-int Master::processFSCmd(const char* ip, const int port,  const ActiveUser* user, const int32_t key, int id, SectorMsg* msg)
+int Master::processFSCmd(const string& ip, const int port,  const ActiveUser* user, const int32_t key, int id, SectorMsg* msg)
 {
    // 100+ storage system
 
@@ -1847,7 +1847,7 @@ int Master::processFSCmd(const char* ip, const int port,  const ActiveUser* user
    return 0;
 }
 
-int Master::processDCCmd(const char* ip, const int port,  const ActiveUser* user, const int32_t key, int id, SectorMsg* msg)
+int Master::processDCCmd(const string& ip, const int port,  const ActiveUser* user, const int32_t key, int id, SectorMsg* msg)
 {
    // 200+ SPE
 
@@ -1944,7 +1944,7 @@ int Master::processDCCmd(const char* ip, const int port,  const ActiveUser* user
       int slaveid = m_SlaveManager.m_mAddrList[addr];
       m_TransManager.addSlave(transid, slaveid);
 
-      msg->setData(0, ip, strlen(ip) + 1);
+      msg->setData(0, ip.c_str(), ip.length() + 1);
       msg->setData(64, (char*)&port, 4);
       msg->setData(68, (char*)&user->m_iDataPort, 4);
       msg->setData(msg->m_iDataLength - SectorMsg::m_iHdrSize, (char*)&transid, 4);
@@ -1981,7 +1981,7 @@ int Master::processDCCmd(const char* ip, const int port,  const ActiveUser* user
       int transid = m_TransManager.create(1, key, msg->getType(), "", 0);
       m_TransManager.addSlave(transid, m_SlaveManager.m_mAddrList[addr]);
 
-      msg->setData(0, ip, strlen(ip) + 1);
+      msg->setData(0, ip.c_str(), ip.length() + 1);
       msg->setData(64, (char*)&port, 4);
       msg->setData(msg->m_iDataLength - SectorMsg::m_iHdrSize, (char*)&transid, 4);
       msg->setData(msg->m_iDataLength - SectorMsg::m_iHdrSize, (char*)&(user->m_iDataPort), 4);
@@ -2008,7 +2008,7 @@ int Master::processDCCmd(const char* ip, const int port,  const ActiveUser* user
    return 0;
 }
 
-int Master::processMCmd(const char* ip, const int port,  const ActiveUser* user, const int32_t key, int id, SectorMsg* msg)
+int Master::processMCmd(const string& ip, const int port,  const ActiveUser* user, const int32_t key, int id, SectorMsg* msg)
 {
    switch (msg->getType())
    {
@@ -2079,7 +2079,7 @@ int Master::sync(const char* fileinfo, const int& size, const int& type)
    return 0;
 }
 
-int Master::processSyncCmd(const char* ip, const int port,  const ActiveUser* user, const int32_t key, int id, SectorMsg* msg)
+int Master::processSyncCmd(const string& ip, const int port,  const ActiveUser* user, const int32_t key, int id, SectorMsg* msg)
 {
    switch (msg->getType())
    {
@@ -2162,7 +2162,7 @@ int Master::processSyncCmd(const char* ip, const int port,  const ActiveUser* us
    return 0;
 }
 
-void Master::reject(const char* ip, const int port, int id, int32_t code)
+void Master::reject(const string& ip, const int port, int id, int32_t code)
 {
    SectorMsg msg;
    msg.setType(-1);

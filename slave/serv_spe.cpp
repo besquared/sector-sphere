@@ -565,7 +565,7 @@ void* Slave::SPEShuffler(void* p)
 
    while (true)
    {
-      char speip[64];
+      string speip;
       int speport;
       SectorMsg msg;
       int msgid;

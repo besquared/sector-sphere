@@ -108,7 +108,7 @@ private:
 
 struct CMsgRecord
 {
-   char m_pcIP[64];
+   std::string m_strIP;
    int m_iPort;
    CGMPMessage* m_pMsg;
    int64_t m_llTimeStamp;
@@ -118,7 +118,9 @@ struct CFMsgRec
 {
    bool operator()(const CMsgRecord* m1, const CMsgRecord* m2) const
    {
-      if (strcmp(m1->m_pcIP, m2->m_pcIP) == 0)
+      int res = strcmp(m1->m_strIP.c_str(), m2->m_strIP.c_str());
+
+      if (0 == res)
       {
          if (m1->m_iPort == m2->m_iPort)
             return m1->m_pMsg->m_iID > m2->m_pMsg->m_iID;
@@ -126,7 +128,7 @@ struct CFMsgRec
          return (m1->m_iPort > m2->m_iPort);
       }
       
-      return (strcmp(m1->m_pcIP, m2->m_pcIP) > 0);
+      return (res > 0);
    }
 };
 
@@ -149,13 +151,13 @@ private:
    int UDTsend(const char* ip, const int& port, CGMPMessage* msg);
 
 public:
-   int sendto(const char* ip, const int& port, int32_t& id, const CUserMessage* msg);
-   int recvfrom(char* ip, int& port, int32_t& id, CUserMessage* msg, const bool& block = true);
+   int sendto(const std::string& ip, const int& port, int32_t& id, const CUserMessage* msg);
+   int recvfrom(std::string& ip, int& port, int32_t& id, CUserMessage* msg, const bool& block = true);
    int recv(const int32_t& id, CUserMessage* msg);
-   int rpc(const char* ip, const int& port, CUserMessage* req, CUserMessage* res);
-   int multi_rpc(const std::vector<char*>& ips, const std::vector<int>& ports, CUserMessage* req);
+   int rpc(const std::string& ip, const int& port, CUserMessage* req, CUserMessage* res);
+   int multi_rpc(const std::vector<std::string>& ips, const std::vector<int>& ports, CUserMessage* req);
 
-   int rtt(const char* ip, const int& port, const bool& clear = false);
+   int rtt(const std::string& ip, const int& port, const bool& clear = false);
 
 private:
    pthread_t m_SndThread;

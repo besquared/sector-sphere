@@ -282,7 +282,7 @@ int Slave::connect()
 
 void Slave::run()
 {
-   char ip[64];
+   string ip;
    int port;
    int32_t id;
    SectorMsg* msg = new SectorMsg;
@@ -330,7 +330,7 @@ void Slave::run()
    delete msg;
 }
 
-int Slave::processSysCmd(const char* ip, const int port, int id, SectorMsg* msg)
+int Slave::processSysCmd(const string& ip, const int port, int id, SectorMsg* msg)
 {
    switch (msg->getType())
    {
@@ -373,7 +373,7 @@ int Slave::processSysCmd(const char* ip, const int port, int id, SectorMsg* msg)
    return 0;
 }
 
-int Slave::processFSCmd(const char* ip, const int port, int id, SectorMsg* msg)
+int Slave::processFSCmd(const string& ip, const int port, int id, SectorMsg* msg)
 {
    switch (msg->getType())
    {
@@ -493,7 +493,7 @@ int Slave::processFSCmd(const char* ip, const int port, int id, SectorMsg* msg)
    return 0;
 }
 
-int Slave::processDCCmd(const char* ip, const int port, int id, SectorMsg* msg)
+int Slave::processDCCmd(const string& ip, const int port, int id, SectorMsg* msg)
 {
    switch (msg->getType())
    {
@@ -593,7 +593,7 @@ int Slave::processDCCmd(const char* ip, const int port, int id, SectorMsg* msg)
    return 0;
 }
 
-int Slave::processMCmd(const char* ip, const int port, int id, SectorMsg* msg)
+int Slave::processMCmd(const string& ip, const int port, int id, SectorMsg* msg)
 {
    switch (msg->getType())
    {

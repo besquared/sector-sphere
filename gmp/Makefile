@@ -2,12 +2,6 @@ include ../Makefile.common
 
 CCFLAGS += -I../udt -I../common
 
-ifeq ($(STATIC), 1)
-   LDFLAGS += librpc.a ../lib/libcommon.a ../lib/libudt.a
-else
-   LDFLAGS += -L../lib -lrpc -lcommon -ludt
-endif
-
 OBJS = gmp.o message.o prec.o
 
 all: librpc.so librpc.a

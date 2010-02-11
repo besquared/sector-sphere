@@ -162,10 +162,10 @@ public:
    void run();
 
 private:
-   int processSysCmd(const char* ip, const int port, int id, SectorMsg* msg);
-   int processFSCmd(const char* ip, const int port, int id, SectorMsg* msg);
-   int processDCCmd(const char* ip, const int port, int id, SectorMsg* msg);
-   int processMCmd(const char* ip, const int port, int id, SectorMsg* msg);
+   int processSysCmd(const std::string& ip, const int port, int id, SectorMsg* msg);
+   int processFSCmd(const std::string& ip, const int port, int id, SectorMsg* msg);
+   int processDCCmd(const std::string& ip, const int port, int id, SectorMsg* msg);
+   int processMCmd(const std::string& ip, const int port, int id, SectorMsg* msg);
 
 private:
    struct Param2
