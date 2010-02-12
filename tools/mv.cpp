@@ -15,7 +15,7 @@ int main(int argc, char** argv)
    Sector client;
 
    Session s;
-   s.loadInfo("../../conf/client.conf");
+   s.loadInfo("../conf/client.conf");
 
    if (client.init(s.m_ClientConf.m_strMasterIP, s.m_ClientConf.m_iMasterPort) < 0)
       return -1;
