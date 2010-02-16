@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 01/02/2010
+   Yunhong Gu, last updated 02/16/2010
 *****************************************************************************/
 
 #include <slavemgmt.h>
@@ -145,11 +145,7 @@ int SlaveManager::insert(SlaveNode& sn)
 
    map<string, set<string> >::iterator i = m_mIPFSInfo.find(sn.m_strIP);
    if (i == m_mIPFSInfo.end())
-   {
-      set<string> tmp;
-      tmp.insert(Metadata::revisePath(sn.m_strStoragePath));
-      m_mIPFSInfo[sn.m_strIP] = tmp;
-   }
+      m_mIPFSInfo[sn.m_strIP].insert(Metadata::revisePath(sn.m_strStoragePath));
    else
       i->second.insert(sn.m_strStoragePath);
 

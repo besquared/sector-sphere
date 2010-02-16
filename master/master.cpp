@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 02/05/2010
+   Yunhong Gu, last updated 02/16/2010
 *****************************************************************************/
 
 #include <common.h>
@@ -661,11 +661,13 @@ int Master::processSlaveJoin(SSLTransport& s, SSLTransport& secconn, const strin
    // recv local storage path, avoid same slave joining more than once
    int32_t size = 0;
    s.recv((char*)&size, 4);
-   char* lspath = NULL;
+   string lspath = "";
    if (size > 0)
    {
-      lspath = new char[size];
-      s.recv(lspath, size);
+      char* tmp = new char[size];
+      s.recv(tmp, size);
+      lspath = Metadata::revisePath(tmp);
+      delete [] tmp;
    }
 
    int32_t res = -1;
@@ -674,7 +676,7 @@ int Master::processSlaveJoin(SSLTransport& s, SSLTransport& secconn, const strin
    secconn.send(slaveIP, 64);
    secconn.recv((char*)&res, 4);
 
-   if ((lspath == NULL) || m_SlaveManager.checkDuplicateSlave(ip, lspath))
+   if ((lspath == "") || m_SlaveManager.checkDuplicateSlave(ip, lspath))
       res = SectorError::E_REPSLAVE;
 
    s.send((char*)&res, 4);
@@ -686,6 +688,7 @@ int Master::processSlaveJoin(SSLTransport& s, SSLTransport& secconn, const strin
       sn.m_strIP = ip;
       s.recv((char*)&sn.m_iPort, 4);
       s.recv((char*)&sn.m_iDataPort, 4);
+      sn.m_strStoragePath = lspath;
       sn.m_llLastUpdateTime = CTimer::getTime();
       sn.m_iRetryNum = 0;
       sn.m_llLastVoteTime = CTimer::getTime();
@@ -2197,7 +2200,7 @@ void* Master::replica(void* s)
          else
          {
             // avoid replicate a file that is currently being replicated
-            if (self->m_sstrOnReplicate.find(src) == self->m_sstrOnReplicate.end())
+            if (self->m_sstrOnReplicate.find(src) != self->m_sstrOnReplicate.end())
                continue;
 
             SNode sn;
