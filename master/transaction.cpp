@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright (c) 2005 - 2009, The Board of Trustees of the University of Illinois.
+Copyright (c) 2005 - 2010, The Board of Trustees of the University of Illinois.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 07/09/2008
+   Yunhong Gu, last updated 02/17/2010
 *****************************************************************************/
 
 #include <common.h>
@@ -46,14 +46,18 @@ using namespace std;
 TransManager::TransManager():
 m_iTransID(1)
 {
+   pthread_mutex_init(&m_TLLock, NULL);
 }
 
 TransManager::~TransManager()
 {
+   pthread_mutex_destroy(&m_TLLock);
 }
 
 int TransManager::create(const int type, const int key, const int cmd, const string& file, const int mode)
 {
+   CGuard tl(m_TLLock);
+
    Transaction t;
    t.m_iTransID = m_iTransID ++;
    t.m_iType = type;
@@ -70,6 +74,8 @@ int TransManager::create(const int type, const int key, const int cmd, const str
 
 int TransManager::addSlave(int transid, int slaveid)
 {
+   CGuard tl(m_TLLock);
+
    m_mTransList[transid].m_siSlaveID.insert(slaveid);
 
    return transid;
@@ -77,6 +83,8 @@ int TransManager::addSlave(int transid, int slaveid)
 
 int TransManager::retrieve(int transid, Transaction& trans)
 {
+   CGuard tl(m_TLLock);
+
    map<int, Transaction>::iterator i = m_mTransList.find(transid);
 
    if (i == m_mTransList.end())
@@ -88,6 +96,8 @@ int TransManager::retrieve(int transid, Transaction& trans)
 
 int TransManager::retrieve(int slaveid, vector<int>& trans)
 {
+   CGuard tl(m_TLLock);
+
    for (map<int, Transaction>::iterator i = m_mTransList.begin(); i != m_mTransList.end(); ++ i)
    {
       if (i->second.m_siSlaveID.find(slaveid) != i->second.m_siSlaveID.end())
@@ -101,6 +111,8 @@ int TransManager::retrieve(int slaveid, vector<int>& trans)
 
 int TransManager::updateSlave(int transid, int slaveid)
 {
+   CGuard tl(m_TLLock);
+
    m_mTransList[transid].m_siSlaveID.erase(slaveid);
    int ret = m_mTransList[transid].m_siSlaveID.size();
    if (ret == 0)
@@ -111,6 +123,8 @@ int TransManager::updateSlave(int transid, int slaveid)
 
 int TransManager::getUserTrans(int key, vector<int>& trans)
 {
+   CGuard tl(m_TLLock);
+
    for (map<int, Transaction>::iterator i = m_mTransList.begin(); i != m_mTransList.end(); ++ i)
    {
       if (key == i->second.m_iUserKey)
@@ -124,5 +138,7 @@ int TransManager::getUserTrans(int key, vector<int>& trans)
 
 unsigned int TransManager::getTotalTrans()
 {
+   CGuard tl(m_TLLock);
+
    return m_mTransList.size();
 }
