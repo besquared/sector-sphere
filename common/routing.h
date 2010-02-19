@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright (c) 2005 - 2009, The Board of Trustees of the University of Illinois.
+Copyright (c) 2005 - 2010, The Board of Trustees of the University of Illinois.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 06/24/2009
+   Yunhong Gu, last updated 02/19/2010
 *****************************************************************************/
 
 
@@ -45,6 +45,7 @@ written by
 #include <vector>
 #include <map>
 #include <string>
+#include <pthread.h>
 #include "dhash.h"
 #include "topology.h"
 
@@ -66,6 +67,7 @@ public:
    int getEntityID(const std::string& path);
 
    int getRouterID(const uint32_t& key);
+
    int getRouterID(const Address& node);
 
    bool match(const uint32_t& cid, const uint32_t& key);
@@ -79,6 +81,9 @@ public:
    std::map<Address, uint32_t, AddrComp> m_mKeyList;
 
    int m_iKeySpace;
+
+private:
+   pthread_mutex_t m_Lock;
 };
 
 #endif

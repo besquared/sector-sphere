@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 02/16/2010
+   Yunhong Gu, last updated 02/19/2010
 *****************************************************************************/
 
 #include <common.h>
@@ -329,7 +329,8 @@ int Master::run()
          SectorMsg msg;
          msg.setKey(0);
          msg.setType(1005); //master node probe msg
-         if (m_GMP.rpc(i->second.m_strIP.c_str(), i->second.m_iPort, &msg, &msg) < 0)
+         msg.setData(0, (char*)&i->first, 4); // ask the other master to check its router ID, in case more than one are started on the same address
+         if ((m_GMP.rpc(i->second.m_strIP.c_str(), i->second.m_iPort, &msg, &msg) < 0) || (msg.getType() < 0))
          {
             m_SectorLog.insert(("Master lost " + i->second.m_strIP + ".").c_str());
             tbrm.push_back(i->first);
@@ -893,9 +894,11 @@ int Master::processMasterJoin(SSLTransport& s, SSLTransport& secconn, const std:
    int32_t res = -1;
    secconn.recv((char*)&res, 4);
 
+   if (res > 0)
+      res = m_iRouterKey;
    s.send((char*)&res, 4);
 
-   if (res == 1)
+   if (res > 0)
    {
       int masterPort;
       int32_t key;
@@ -2030,6 +2033,8 @@ int Master::processMCmd(const string& ip, const int port,  const ActiveUser* use
 
    case 1005: // master probe
    {
+      if (*(int32_t*)msg->getData() != m_iRouterKey)
+         msg->setType(-msg->getType());
       msg->m_iDataLength = SectorMsg::m_iHdrSize + 4;
       m_GMP.sendto(ip, port, id, msg);
       break;

@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright (c) 2005 - 2009, The Board of Trustees of the University of Illinois.
+Copyright (c) 2005 - 2010, The Board of Trustees of the University of Illinois.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -35,9 +35,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 06/21/2009
+   Yunhong Gu, last updated 02/19/2010
 *****************************************************************************/
 
+#include <common.h>
 #include "routing.h"
 
 using namespace std;
@@ -45,26 +46,28 @@ using namespace std;
 Routing::Routing():
 m_iKeySpace(32)
 {
+   pthread_mutex_init(&m_Lock, NULL);
 }
 
 Routing::~Routing()
 {
+   pthread_mutex_destroy(&m_Lock);
 }
 
 void Routing::init()
 {
    m_vFingerTable.clear();
    m_mAddressList.clear();
-   m_mKeyList.clear();
 }
 
 int Routing::insert(const uint32_t& key, const Address& node)
 {
+   CGuard rg(m_Lock);
+
    if (m_mAddressList.find(key) != m_mAddressList.end())
       return -1;
 
    m_mAddressList[key] = node;
-   m_mKeyList[node] = key;
 
    bool found = false;
    for (vector<uint32_t>::iterator i = m_vFingerTable.begin(); i != m_vFingerTable.end(); ++ i)
@@ -84,11 +87,12 @@ int Routing::insert(const uint32_t& key, const Address& node)
 
 int Routing::remove(const uint32_t& key)
 {
+   CGuard rg(m_Lock);
+
    map<uint32_t, Address>::iterator k = m_mAddressList.find(key);
    if (k == m_mAddressList.end())
       return -1;
 
-   m_mKeyList.erase(k->second);
    m_mAddressList.erase(k);
 
    for (vector<uint32_t>::iterator i = m_vFingerTable.begin(); i != m_vFingerTable.end(); ++ i)
@@ -105,6 +109,8 @@ int Routing::remove(const uint32_t& key)
 
 int Routing::lookup(const uint32_t& key, Address& node)
 {
+   CGuard rg(m_Lock);
+
    if (m_vFingerTable.empty())
       return -1;
 
@@ -123,6 +129,8 @@ int Routing::lookup(const string& path, Address& node)
 
 int Routing::getEntityID(const string& path)
 {
+   CGuard rg(m_Lock);
+
    uint32_t key = DHash::hash(path.c_str(), m_iKeySpace);
 
    if (m_vFingerTable.empty())
@@ -133,6 +141,8 @@ int Routing::getEntityID(const string& path)
 
 int Routing::getRouterID(const uint32_t& key)
 {
+   CGuard rg(m_Lock);
+
    int pos = 0;
    for (vector<uint32_t>::const_iterator i = m_vFingerTable.begin(); i != m_vFingerTable.end(); ++ i)
    {
@@ -145,15 +155,21 @@ int Routing::getRouterID(const uint32_t& key)
 
 int Routing::getRouterID(const Address& node)
 {
-   map<Address, uint32_t, AddrComp>::iterator a = m_mKeyList.find(node);
-   if (a == m_mKeyList.end())
-      return -1;
+   CGuard rg(m_Lock);
 
-   return getRouterID(a->second);
+   for (map<uint32_t, Address>::iterator i = m_mAddressList.begin(); i != m_mAddressList.end(); ++ i)
+   {
+      if ((i->second.m_iPort == node.m_iPort) && (i->second.m_strIP == node.m_strIP))
+         return i->first;
+   }
+
+   return -1;
 }
 
 bool Routing::match(const uint32_t& cid, const uint32_t& key)
 {
+   CGuard rg(m_Lock);
+
    if (m_vFingerTable.empty())
       return false;
 
@@ -162,6 +178,8 @@ bool Routing::match(const uint32_t& cid, const uint32_t& key)
 
 bool Routing::match(const char* path, const uint32_t& key)
 {
+   CGuard rg(m_Lock);
+
    if (m_vFingerTable.empty())
       return false;
 
@@ -172,6 +190,8 @@ bool Routing::match(const char* path, const uint32_t& key)
 
 int Routing::getPrimaryMaster(Address& node)
 {
+   CGuard rg(m_Lock);
+
    if (m_mAddressList.empty())
       return -1;
 
