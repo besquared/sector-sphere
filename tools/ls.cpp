@@ -51,6 +51,22 @@ int main(int argc, char** argv)
       if (wc && !WildCard::match(orig, i->m_strName))
          continue;
 
+      time_t t = i->m_llTimeStamp;
+      char buf[64];
+      ctime_r(&t, buf);
+      for (char* p = buf; *p != '\n'; ++ p)
+         cout << *p;
+      cout << "\t";
+
+      if (i->m_bIsDir)
+         cout << setiosflags(ios::right) << setw(8) << "<dir>" << "\t";
+      else
+         cout << setiosflags(ios::right) << setw(8) << i->m_llSize << " bytes\t";
+
+      setiosflags(ios::left);
+      cout << i->m_strName << endl;
+
+/*
       cout << setiosflags(ios::left) << setw(24) << i->m_strName << "\t";
       if (i->m_bIsDir)
          cout << "<dir>" << endl;
@@ -59,6 +75,7 @@ int main(int argc, char** argv)
          time_t t = i->m_llTimeStamp;
          cout << i->m_llSize << " bytes " << "\t" << ctime(&t);
       }
+*/
    }
 
    client.logout();

@@ -63,6 +63,7 @@ written by
 #endif
 
 #include <transport.h>
+#include <sector.h>
 #include <message.h>
 #include <prec.h>
 
@@ -155,7 +156,7 @@ public:
    int recvfrom(std::string& ip, int& port, int32_t& id, CUserMessage* msg, const bool& block = true);
    int recv(const int32_t& id, CUserMessage* msg);
    int rpc(const std::string& ip, const int& port, CUserMessage* req, CUserMessage* res);
-   int multi_rpc(const std::vector<std::string>& ips, const std::vector<int>& ports, CUserMessage* req);
+   int multi_rpc(const std::vector<Address>& dest, CUserMessage* req, std::vector<CUserMessage*>* res = NULL);
 
    int rtt(const std::string& ip, const int& port, const bool& clear = false);
 

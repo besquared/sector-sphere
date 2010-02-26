@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 01/27/2010
+   Yunhong Gu, last updated 02/23/2010
 *****************************************************************************/
 
 #include "dcclient.h"
@@ -713,6 +713,8 @@ int DCClient::checkReduceProgress()
 
 int DCClient::read(SphereResult*& res, const bool& inorder, const bool& wait)
 {
+   res = NULL;
+
    while (0 == m_iAvailRes)
    {
       if (!wait || (0 == m_iTotalSPE))

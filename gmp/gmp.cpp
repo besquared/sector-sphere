@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 02/08/2010
+   Yunhong Gu, last updated 02/25/2010
 *****************************************************************************/
 
 
@@ -867,7 +867,7 @@ DWORD WINAPI CGMP::udtRcvHandler(LPVOID s)
       #endif
 
       rec->m_strIP = tmp;
-      rec->m_iPort = ntohs(port);
+      rec->m_iPort = port;
       rec->m_pMsg = new CGMPMessage;
       //rec->m_pMsg->m_iType = type;
       rec->m_pMsg->m_iSession = header[1];
@@ -966,49 +966,73 @@ int CGMP::rpc(const string& ip, const int& port, CUserMessage* req, CUserMessage
    return 0;
 }
 
-int CGMP::multi_rpc(const vector<string>& ips, const vector<int>& ports, CUserMessage* req)
+int CGMP::multi_rpc(const vector<Address>& dest, CUserMessage* req, vector<CUserMessage*>* res)
 {
-   if (ips.size() != ports.size())
+   unsigned int tn = dest.size();
+
+   if (0 == tn)
+      return 0;
+
+   if ((NULL != res) && (res->size() != tn))
       return -1;
 
-   CUserMessage msg;
-
-   map<int, string> waiting1;
-   map<int, int> waiting2;
-   int32_t id = 0;
-
-   for (int i = 0, n = ips.size(); i < n; ++ i)
+   vector<int> ids;
+   ids.resize(tn);
+   vector<int>::iterator n = ids.begin();
+   for (vector<Address>::const_iterator i = dest.begin(); i != dest.end(); ++ i)
    {
-      id = 0;
-      if (sendto(ips[i], ports[i], id, req) < 0)
-         continue;
+      int id = 0;       
+      if (sendto(i->m_strIP, i->m_iPort, id, req) < 0)
+         id = 0;
 
-      waiting1[id] = ips[i];
-      waiting2[id] = ports[i];
+      *n = id;
+      ++ n;
    }
 
-   while (!waiting1.empty())
+   vector<CUserMessage*>::iterator m;
+   if (NULL != res) 
+      m = res->begin();
+   n = ids.begin();
+   vector<Address>::const_iterator a = dest.begin();
+   uint64_t start_time = CTimer::getTime();
+   int fail_num = tn;
+
+   for (; n != ids.end(); ++ n)
    {
-      id = waiting1.begin()->first;
-
-      uint64_t t = CTimer::getTime();
-      int errcount = 0;
-
-      while (recv(id, &msg) < 0)
+      if (0 != *n)
       {
-         if (rtt(waiting1.begin()->second, waiting2.begin()->second, true) < 0)
-            errcount ++;
+         int errcount = 0;
+         bool found = true;
+         CUserMessage tmp;
+         CUserMessage* msg;
+         if ((NULL != res) && (NULL != *m))
+            msg = *m;
+         else
+            msg = &tmp;
 
-         // 60 seconds maximum waiting time
-         if ((errcount > 10) || (CTimer::getTime() - t > 60000000))
-            break;
+         while (recv(*n, msg) < 0)
+         {
+            if (rtt(a->m_strIP, a->m_iPort, true) < 0)
+               errcount ++;
+
+            // 60 seconds maximum waiting time
+            if ((errcount > 10) || (CTimer::getTime() - start_time > 60000000))
+            {
+               found = false;
+               break;
+            }
+         }
+
+         if (found)
+            fail_num --;
       }
 
-      waiting1.erase(id);
-      waiting2.erase(id);
+      if (NULL != res)
+         ++ m;
+      ++ a;
    }
 
-   return 0;
+   return -fail_num;
 }
 
 int CGMP::rtt(const string& ip, const int& port, const bool& clear)

@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright (c) 2005 - 2009, The Board of Trustees of the University of Illinois.
+Copyright (c) 2005 - 2010, The Board of Trustees of the University of Illinois.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 06/05/2009
+   Yunhong Gu, last updated 02/25/2010
 *****************************************************************************/
 
 
@@ -44,8 +44,9 @@ written by
 
 #include <string>
 #include <vector>
+#include <map>
 
-class ActiveUser
+class User
 {
 public:
    int deserialize(std::vector<std::string>& dirs, const std::string& buf);
@@ -71,6 +72,24 @@ public:
    std::vector<std::string> m_vstrReadList;	// readable directories
    std::vector<std::string> m_vstrWriteList;	// writable directories
    bool m_bExec;				// permission to run Sphere application
+};
+
+class UserManager
+{
+public:
+   UserManager();
+   ~UserManager();
+
+public:
+   int insert(User* u);
+   int checkInactiveUsers(std::vector<User*>& iu);
+   int serializeUsers(int& num, std::vector<char*>& buf, std::vector<int>& size);
+   User* lookup(int key);
+   int remove(int key);
+
+private:
+   std::map<int, User*> m_mActiveUsers;
+   pthread_mutex_t m_Lock;
 };
 
 #endif

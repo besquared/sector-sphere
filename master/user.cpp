@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright (c) 2005 - 2009, The Board of Trustees of the University of Illinois.
+Copyright (c) 2005 - 2010, The Board of Trustees of the University of Illinois.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -35,16 +35,17 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 06/21/2009
+   Yunhong Gu, last updated 02/25/2010
 *****************************************************************************/
 
 #include "user.h"
+#include <common.h>
 #include <string.h>
 
 using namespace std;
 
 
-int ActiveUser::deserialize(vector<string>& dirs, const string& buf)
+int User::deserialize(vector<string>& dirs, const string& buf)
 {
    unsigned int s = 0;
    while (s < buf.length())
@@ -61,7 +62,7 @@ int ActiveUser::deserialize(vector<string>& dirs, const string& buf)
    return dirs.size();
 }
 
-bool ActiveUser::match(const string& path, int32_t rwx) const
+bool User::match(const string& path, int32_t rwx) const
 {
    // check read flag bit 1 and write flag bit 2
    rwx &= 3;
@@ -93,7 +94,7 @@ bool ActiveUser::match(const string& path, int32_t rwx) const
    return (rwx == 0);
 }
 
-int ActiveUser::serialize(char*& buf, int& size)
+int User::serialize(char*& buf, int& size)
 {
    buf = new char[65536];
    char* p = buf;
@@ -140,7 +141,7 @@ int ActiveUser::serialize(char*& buf, int& size)
    return size;
 }
 
-int ActiveUser::deserialize(const char* buf, const int& size)
+int User::deserialize(const char* buf, const int& size)
 {
    char* p = (char*)buf;
    m_strName = p + 4;
@@ -177,3 +178,92 @@ int ActiveUser::deserialize(const char* buf, const int& size)
 
    return size;
 }
+
+
+UserManager::UserManager()
+{
+   pthread_mutex_init(&m_Lock, NULL);
+}
+
+UserManager::~UserManager()
+{
+   pthread_mutex_destroy(&m_Lock);
+}
+
+int UserManager::insert(User* u)
+{
+   CGuard ug(m_Lock);
+
+   m_mActiveUsers[u->m_iKey] = u;
+   return 0;
+}
+
+int UserManager::checkInactiveUsers(vector<User*>& iu)
+{
+   CGuard ug(m_Lock);
+
+   iu.clear();
+
+   for (map<int, User*>::iterator i = m_mActiveUsers.begin(); i != m_mActiveUsers.end(); ++ i)
+   {
+      // slave and master are special users and they should never timeout
+      if (0 == i->first)
+         continue;
+
+      if (CTimer::getTime() - i->second->m_llLastRefreshTime > 30 * 60 * 1000000LL)
+         iu.push_back(i->second);
+   }
+
+   for (vector<User*>::iterator i = iu.begin(); i != iu.end(); ++ i)
+      m_mActiveUsers.erase((*i)->m_iKey);
+
+   return iu.size();
+}
+
+int UserManager::serializeUsers(int& num, vector<char*>& buf, vector<int>& size)
+{
+   CGuard ug(m_Lock);
+
+   buf.clear();
+   size.clear();
+
+   for (map<int, User*>::iterator i = m_mActiveUsers.begin(); i != m_mActiveUsers.end(); ++ i)
+   {
+      if (0 == i->first)
+         continue;
+
+      char* ubuf = NULL;
+      int usize = 0;
+      i->second->serialize(ubuf, usize);
+
+      buf.push_back(ubuf);
+      size.push_back(usize);
+   }
+
+   num = m_mActiveUsers.size() - 1;
+
+   return num;
+}
+
+User* UserManager::lookup(int key)
+{
+   CGuard ug(m_Lock);
+
+   map<int, User*>::iterator i = m_mActiveUsers.find(key);
+   if (i == m_mActiveUsers.end())
+      return NULL;
+
+   return i->second;
+}
+
+int UserManager::remove(int key)
+{
+   CGuard ug(m_Lock);
+
+   map<int, User*>::iterator i = m_mActiveUsers.find(key);
+   if (i == m_mActiveUsers.end())
+      return -1;
+
+   m_mActiveUsers.erase(i);
+   return 0;
+} 

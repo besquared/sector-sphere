@@ -72,8 +72,6 @@ m_iPort(0)
 
 int SServer::init(const int& port, const char* cert, const char* key)
 {
-   signal(SIGPIPE, SIG_IGN);
-
    SSLTransport::init();
 
    m_iPort = port;
@@ -150,6 +148,12 @@ const User* SServer::match(const map<string, User>& users, const char* name, con
 
 void SServer::run()
 {
+   //ignore SIGPIPE
+   sigset_t ps;
+   sigemptyset(&ps);
+   sigaddset(&ps, SIGPIPE);
+   pthread_sigmask(SIG_BLOCK, &ps, NULL);
+
    while (true)
    {
       char ip[64];
@@ -184,8 +188,6 @@ int32_t SServer::generateKey()
 
 void* SServer::process(void* p)
 {
-   signal(SIGPIPE, SIG_IGN);
-
    SServer* self = ((Param*)p)->sserver;
    SSLTransport* s = ((Param*)p)->ssl;
    delete (Param*)p;

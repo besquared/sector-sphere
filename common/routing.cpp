@@ -198,3 +198,17 @@ int Routing::getPrimaryMaster(Address& node)
    node = m_mAddressList.begin()->second;
    return 0;
 }
+
+int Routing::getNumOfMasters()
+{
+   CGuard rg(m_Lock);
+
+   return m_mAddressList.size();
+}
+
+void Routing::getListOfMasters(std::map<uint32_t, Address>& al)
+{
+   CGuard rg(m_Lock);
+
+   al = m_mAddressList;
+}

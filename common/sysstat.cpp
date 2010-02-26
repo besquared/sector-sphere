@@ -39,13 +39,14 @@ written by
 *****************************************************************************/
 
 #include <iostream>
+#include <cmath>
 #include <sector.h>
 
 using namespace std;
 
 void SysStat::print()
 {
-   const int MB = 1024 * 1024;
+   const float MB = 1024.0 * 1024.0;
 
    cout << "Sector System Information:" << endl;
    time_t st = m_llStartTime;

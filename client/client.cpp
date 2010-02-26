@@ -565,7 +565,9 @@ int Client::updateMasters()
    SectorMsg msg;
    msg.setKey(m_iKey);
 
-   for (map<uint32_t, Address>::iterator i = m_Routing.m_mAddressList.begin(); i != m_Routing.m_mAddressList.end(); ++ i)
+   map<uint32_t, Address> al;
+   m_Routing.getListOfMasters(al);
+   for (map<uint32_t, Address>::iterator i = al.begin(); i != al.end(); ++ i)
    {
       msg.setType(5);
 

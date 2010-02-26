@@ -51,6 +51,26 @@ written by
 
 using namespace std;
 
+SlaveNode::SlaveNode():
+m_iNodeID(-1),
+m_strIP("0.0.0.0"),
+m_strPublicIP("0.0.0.0"),
+m_iPort(0),
+m_iDataPort(0),
+m_strStoragePath("/tmp"),
+m_llAvailDiskSpace(0),
+m_llTotalFileSize(0),
+m_llTimeStamp(-1),
+m_llCurrMemUsed(0),
+m_llCurrCPUUsed(0),
+m_llTotalInputData(0),
+m_llTotalOutputData(0),
+m_llLastUpdateTime(0),
+m_iRetryNum(0),
+m_iStatus(1),
+m_llLastVoteTime(-1)
+{
+}
 
 int SlaveNode::deserialize(const char* buf, int size)
 {

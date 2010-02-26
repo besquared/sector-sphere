@@ -53,6 +53,9 @@ written by
 class SlaveNode
 {
 public:
+   SlaveNode();
+
+public:
    int m_iNodeID;					// unique slave node ID
 
    //Address m_Addr;

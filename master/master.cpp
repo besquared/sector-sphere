@@ -51,6 +51,7 @@ using namespace std;
 
 Master::Master():
 m_pMetadata(NULL),
+m_llLastUpdateTime(0),
 m_pcTopoData(NULL),
 m_iTopoDataSize(0)
 {
@@ -91,9 +92,7 @@ int Master::init()
    }
 
    m_SlaveManager.init("../conf/topology.conf");
-   m_iTopoDataSize = m_SlaveManager.m_Topology.getTopoDataSize();
-   m_pcTopoData = new char[m_iTopoDataSize];
-   m_SlaveManager.m_Topology.serialize(m_pcTopoData, m_iTopoDataSize);
+   m_SlaveManager.serializeTopo(m_pcTopoData, m_iTopoDataSize);
 
    // check local directories, create them is not exist
    m_strHomeDir = m_SysConfig.m_strHomeDir;
@@ -142,13 +141,12 @@ int Master::init()
    loadSlaveAddr("../conf/slaves.list");
 
    // add "slave" as a special user
-   m_mActiveUser.clear();
-   ActiveUser au;
-   au.m_strName = "system";
-   au.m_iKey = 0;
-   au.m_vstrReadList.insert(au.m_vstrReadList.begin(), "/");
-   //au.m_vstrWriteList.insert(au.m_vstrWriteList.begin(), "/");
-   m_mActiveUser[au.m_iKey] = au;
+   User* au = new User;
+   au->m_strName = "system";
+   au->m_iKey = 0;
+   au->m_vstrReadList.insert(au->m_vstrReadList.begin(), "/");
+   //au->m_vstrWriteList.insert(au->m_vstrWriteList.begin(), "/");
+   m_UserManager.insert(au);
 
    // running...
    m_Status = RUNNING;
@@ -267,41 +265,31 @@ int Master::join(const char* ip, const int& port)
    // recv slave list
    if (s.recv((char*)&num, 4) < 0)
       return -1;
-   for (int i = 0; i < num; ++ i)
-   {
-      SlaveNode sn;
-      s.recv((char*)&sn.m_iNodeID, 4);
-      char ip[64];
-      int size = 0;
-      s.recv((char*)&size, 4);
-      s.recv(ip, size);
-      sn.m_strIP = ip;
-      s.recv((char*)&sn.m_iPort, 4);
-      s.recv((char*)&sn.m_iDataPort, 4);
-      sn.m_llLastUpdateTime = CTimer::getTime();
-      sn.m_iRetryNum = 0;
-      sn.m_llLastVoteTime = CTimer::getTime();
-      m_SlaveManager.insert(sn);
-      m_SlaveManager.updateClusterStat();
-   }
+   int size = 0;
+   if (s.recv((char*)&size, 4) < 0)
+      return -1;
+   char* buf = new char [size];
+   s.recv(buf, size);
+   m_SlaveManager.deserializeSlaveList(num, buf, size);
+   delete [] buf;
 
    // recv user list
    if (s.recv((char*)&num, 4) < 0)
       return -1;
    for (int i = 0; i < num; ++ i)
    {
-      int size = 0;
+      size = 0;
       s.recv((char*)&size, 4);
       char* ubuf = new char[size];
       s.recv(ubuf, size);
-      ActiveUser au;
-      au.deserialize(ubuf, size);
+      User* u = new User;
+      u->deserialize(ubuf, size);
       delete [] ubuf;
-      m_mActiveUser[au.m_iKey] = au;
+      m_UserManager.insert(u);
    }
 
    // recv metadata
-   int size = 0;
+   size = 0;
    s.recv((char*)&size, 4);
    s.recvfile((m_strHomeDir + ".tmp/master_meta.dat").c_str(), 0, size);
    m_pMetadata->deserialize("/", m_strHomeDir + ".tmp/master_meta.dat", NULL);
@@ -321,7 +309,9 @@ int Master::run()
       // check other masters
       vector<uint32_t> tbrm;
 
-      for (map<uint32_t, Address>::iterator i = m_Routing.m_mAddressList.begin(); i != m_Routing.m_mAddressList.end(); ++ i)
+      map<uint32_t, Address> al;
+      m_Routing.getListOfMasters(al);
+      for (map<uint32_t, Address>::iterator i = al.begin(); i != al.end(); ++ i)
       {
          if (i->first == m_iRouterKey)
             continue;
@@ -336,14 +326,12 @@ int Master::run()
             tbrm.push_back(i->first);
 
             // send the master drop info to all slaves
-            for (map<int, SlaveNode>::iterator i = m_SlaveManager.m_mSlaveList.begin(); i != m_SlaveManager.m_mSlaveList.end(); ++ i)
-            {
-               SectorMsg msg;
-               msg.setKey(0);
-               msg.setType(1006);
-               msg.setData(0, (char*)&i->first, 4);
-               m_GMP.rpc(i->second.m_strIP.c_str(), i->second.m_iPort, &msg, &msg);
-            }
+            SectorMsg msg;
+            msg.setKey(0);
+            msg.setType(1006);
+            msg.setData(0, (char*)&i->first, 4);
+            m_SlaveManager.updateSlaveList(m_vSlaveList, m_llLastUpdateTime);
+            m_GMP.multi_rpc(m_vSlaveList, &msg);
          }
       }
 
@@ -351,74 +339,43 @@ int Master::run()
          m_Routing.remove(*i);
 
       // check each slave node
-      for (map<int, SlaveNode>::iterator i = m_SlaveManager.m_mSlaveList.begin(); i != m_SlaveManager.m_mSlaveList.end(); ++ i)
+      SectorMsg msg;
+      msg.setType(1);
+      m_SlaveManager.updateSlaveList(m_vSlaveList, m_llLastUpdateTime);
+
+      vector<CUserMessage*>* res = new vector<CUserMessage*>;
+      res->resize(m_vSlaveList.size());
+      for (vector<CUserMessage*>::iterator i = res->begin(); i != res->end(); ++ i)
+         *i = new SectorMsg;
+
+      m_GMP.multi_rpc(m_vSlaveList, &msg, res);
+
+      for (int i = 0, n = m_vSlaveList.size(); i < n; ++ i)
       {
-         SectorMsg msg;
-         msg.setType(1);
+         SectorMsg* r = dynamic_cast<SectorMsg*>((*res)[i]);
 
-         if (m_GMP.rpc(i->second.m_strIP.c_str(), i->second.m_iPort, &msg, &msg) >= 0)
+         if (NULL != r)
          {
-            i->second.m_llLastUpdateTime = CTimer::getTime();
-            i->second.deserialize(msg.getData(), msg.m_iDataLength);
-
-            i->second.m_iRetryNum = 0;
-
-            if (i->second.m_llAvailDiskSpace < 10000000000LL)
-            {
-               if (i->second.m_iStatus == 1)
-               {
-                  char text[64];
-                  sprintf(text, "Slave %s has less than 10GB available disk space left.", i->second.m_strIP.c_str());
-                  m_SectorLog.insert(text);
-
-                  i->second.m_iStatus = 2;
-               }
-            }
-            else
-            {
-               if (i->second.m_iStatus == 2)
-                  i->second.m_iStatus = 1;
-            }
+            if (r->getType() > 0)
+               m_SlaveManager.updateSlaveInfo(m_vSlaveList[i], r->getData(), r->m_iDataLength);
+            delete r;
          }
          else
-           i->second.m_iRetryNum ++;
+         {
+            m_SlaveManager.increaseRetryCount(m_vSlaveList[i]);
+         }
       }
 
       // check each users, remove inactive ones
-      vector<int> tbru;
-
-      for (map<int, ActiveUser>::iterator i = m_mActiveUser.begin(); i != m_mActiveUser.end(); ++ i)
+      vector<User*> iu;
+      m_UserManager.checkInactiveUsers(iu);
+      for (vector<User*>::iterator i = iu.begin(); i != iu.end(); ++ i)
       {
-         if (0 == i->first)
-            continue;
-
-         if (CTimer::getTime() - i->second.m_llLastRefreshTime > 30 * 60 * 1000000LL)
-         {
-            bool active = false;
-            // check if there is any active transtions requested by the user
-            for (map<int, Transaction>::iterator t = m_TransManager.m_mTransList.begin(); t != m_TransManager.m_mTransList.end(); ++ t)
-            {
-               if (t->second.m_iUserKey == i->second.m_iKey)
-               {
-                  active = true;
-                  break;
-               }
-            }
-
-            if (!active)
-               tbru.insert(tbru.end(), i->first);
-         }
-      }
-
-      // remove from active user list
-      for (vector<int>::iterator i = tbru.begin(); i != tbru.end(); ++ i)
-      {
-         char* text = new char[64 + m_mActiveUser[*i].m_strName.length()];
-         sprintf(text, "User %s timeout. Kicked out.", m_mActiveUser[*i].m_strName.c_str());
+         char* text = new char[64 + (*i)->m_strName.length()];
+         sprintf(text, "User %s timeout. Kicked out.", (*i)->m_strName.c_str());
          m_SectorLog.insert(text);
          delete [] text;
-
-         m_mActiveUser.erase(*i);
+         delete *i;
       }
 
 
@@ -429,75 +386,44 @@ int Master::run()
 
 
       // check each slave node
-      // if probe fails, remove the metadata about the data on the node, and create new replicas
-      vector<int> tbrs;
-      vector<SlaveAddr> tbsaddr;
+      // if probe fails, remove the metadata of the data on the node, and create new replicas
+      map<int, Address> bad;
+      map<int, Address> lost;
+      m_SlaveManager.checkBadAndLost(bad, lost);
 
-      for (map<int, SlaveNode>::iterator i = m_SlaveManager.m_mSlaveList.begin(); i != m_SlaveManager.m_mSlaveList.end(); ++ i)
+      for (map<int, Address>::iterator i = bad.begin(); i != bad.end(); ++ i)
       {
-         if (i->second.m_llLastVoteTime - CTimer::getTime() > 24LL * 60 * 3600 * 1000000)
-         {
-            i->second.m_sBadVote.clear();
-            i->second.m_llLastVoteTime = CTimer::getTime();
-         }
-
-         if ((i->second.m_sBadVote.size() * 2 > m_SlaveManager.m_mSlaveList.size())
-            && (m_SysConfig.m_iReplicaNum > 1))
-         {
-            vector<int> trans;
-            m_TransManager.retrieve(i->first, trans);
-            if (trans.size() > 0)
-               continue;
-
-            m_SectorLog.insert(("Bad slave detected " + i->second.m_strIP + ".").c_str());
-
-            // remove the data on that slave
-            Address addr;
-            addr.m_strIP = i->second.m_strIP;
-            addr.m_iPort = i->second.m_iPort;
-            m_pMetadata->substract("/", addr);
-
-            // to be removed
-            tbrs.insert(tbrs.end(), i->first);
-         }
-         else if (i->second.m_iRetryNum > 10)
-         {
-            m_SectorLog.insert(("Slave lost " + i->second.m_strIP + ".").c_str());
-
-            // to be removed
-            tbrs.insert(tbrs.end(), i->first);
-
-            // remove the data in that 
-            Address addr;
-            addr.m_strIP = i->second.m_strIP;
-            addr.m_iPort = i->second.m_iPort;
-            m_pMetadata->substract("/", addr);
-
-            //remove all associated transactions and release IO locks...
-            vector<int> trans;
-            m_TransManager.retrieve(i->first, trans);
-            for (vector<int>::iterator t = trans.begin(); t != trans.end(); ++ t)
-            {
-               Transaction tt;
-               m_TransManager.retrieve(*t, tt);
-               m_pMetadata->unlock(tt.m_strFile.c_str(), tt.m_iUserKey, tt.m_iMode);
-               m_TransManager.updateSlave(*t, i->first);
-            }
-
-            // to be restarted
-            map<string, SlaveAddr>::iterator sa = m_mSlaveAddrRec.find(i->second.m_strIP);
-            if (sa != m_mSlaveAddrRec.end())
-               tbsaddr.insert(tbsaddr.end(), sa->second);
-         }
+         m_SectorLog.insert(("Bad slave detected " + i->second.m_strIP + ".").c_str());
+         //TODO: exclude bad nodes from future transactions, gradually move data out of those nodes
       }
 
-      // remove from slave list
-      for (vector<int>::iterator i = tbrs.begin(); i != tbrs.end(); ++ i)
+      for (map<int, Address>::iterator i = lost.begin(); i != lost.end(); ++ i)
       {
-         m_SlaveManager.remove(*i);
+         m_SectorLog.insert(("Slave lost " + i->second.m_strIP + ".").c_str());
+
+         // remove the data on that node
+         Address addr;
+         addr.m_strIP = i->second.m_strIP;
+         addr.m_iPort = i->second.m_iPort;
+         m_pMetadata->substract("/", addr);
+
+         //remove all associated transactions and release IO locks...
+         vector<int> trans;
+         m_TransManager.retrieve(i->first, trans);
+         for (vector<int>::iterator t = trans.begin(); t != trans.end(); ++ t)
+         {
+            Transaction tt;
+            m_TransManager.retrieve(*t, tt);
+            m_pMetadata->unlock(tt.m_strFile.c_str(), tt.m_iUserKey, tt.m_iMode);
+            m_TransManager.updateSlave(*t, i->first);
+         }
+
+         m_SlaveManager.remove(i->first);
 
          // send lost slave info to all existing masters
-         for (map<uint32_t, Address>::iterator m = m_Routing.m_mAddressList.begin(); m != m_Routing.m_mAddressList.end(); ++ m)
+         map<uint32_t, Address> al;
+         m_Routing.getListOfMasters(al);
+         for (map<uint32_t, Address>::iterator m = al.begin(); m != al.end(); ++ m)
          {
             if (m->first == m_iRouterKey)
                continue;
@@ -505,29 +431,23 @@ int Master::run()
             SectorMsg msg;
             msg.setKey(0);
             msg.setType(1007);
-            msg.setData(0, (char*)&(*i), 4);
+            msg.setData(0, (char*)&(i->first), 4);
             m_GMP.rpc(m->second.m_strIP.c_str(), m->second.m_iPort, &msg, &msg);
+         }
+
+         map<string, SlaveAddr>::iterator sa = m_mSlaveAddrRec.find(i->second.m_strIP);
+         if (sa != m_mSlaveAddrRec.end())
+         {
+            m_SectorLog.insert(("Restart slave " + sa->second.m_strAddr + " " + sa->second.m_strBase).c_str());
+
+            // kill and restart the slave
+            system((string("ssh ") + sa->second.m_strAddr + " killall -9 start_slave").c_str());
+            system((string("ssh ") + sa->second.m_strAddr + " \"" + sa->second.m_strBase + "/start_slave " + sa->second.m_strBase + " &> /dev/null &\"").c_str());
          }
       }
 
       // update cluster statistics
       m_SlaveManager.updateClusterStat();
-
-      // restart dead slaves
-      if (tbsaddr.size() > 0)
-      {
-         for (vector<SlaveAddr>::iterator i = tbsaddr.begin(); i != tbsaddr.end(); ++ i)
-         {
-            m_SectorLog.insert(("Restart slave " + i->m_strAddr + " " + i->m_strBase).c_str());
-
-            // kill and restart the slave
-            system((string("ssh ") + i->m_strAddr + " killall -9 start_slave").c_str());
-            system((string("ssh ") + i->m_strAddr + " \"" + i->m_strBase + "/start_slave " + i->m_strBase + " &> /dev/null &\"").c_str());
-         }
-
-         // do not check replicas at this time because files on the restarted slave have not been counted yet
-         continue;
-      }
 
       // check replica, create or remove replicas if necessary
       // only the first master is responsible for replica checking
@@ -552,6 +472,12 @@ int Master::stop()
 void* Master::service(void* s)
 {
    Master* self = (Master*)s;
+
+   //ignore SIGPIPE
+   sigset_t ps;
+   sigemptyset(&ps);
+   sigaddset(&ps, SIGPIPE);
+   pthread_sigmask(SIG_BLOCK, &ps, NULL);
 
    const int ServiceWorker = 4;
    for (int i = 0; i < ServiceWorker; ++ i)
@@ -591,8 +517,6 @@ void* Master::service(void* s)
 
 void* Master::serviceEx(void* param)
 {
-   signal(SIGPIPE, SIG_IGN);
-
    Master* self = (Master*)param;
 
    SSLTransport secconn;
@@ -720,7 +644,7 @@ int Master::processSlaveJoin(SSLTransport& s, SSLTransport& secconn, const strin
       m_pMetadata->merge("/", branch, m_SysConfig.m_iReplicaNum);
       unlink((m_strHomeDir + ".tmp/" + ip + ".dat").c_str());
 
-      //sn.m_llTotalFileSize = m_pMetadata->getTotalDataSize("/");
+      sn.m_llTotalFileSize = m_pMetadata->getTotalDataSize("/");
 
       sn.m_llCurrMemUsed = 0;
       sn.m_llCurrCPUUsed = 0;
@@ -751,9 +675,11 @@ int Master::processSlaveJoin(SSLTransport& s, SSLTransport& secconn, const strin
 
          // send the list of masters to the new slave
          s.send((char*)&m_iRouterKey, 4);
-         int num = m_Routing.m_mAddressList.size() - 1;
+         int num = m_Routing.getNumOfMasters() - 1;
          s.send((char*)&num, 4);
-         for (map<uint32_t, Address>::iterator i = m_Routing.m_mAddressList.begin(); i != m_Routing.m_mAddressList.end(); ++ i)
+         map<uint32_t, Address> al;
+         m_Routing.getListOfMasters(al);
+         for (map<uint32_t, Address>::iterator i = al.begin(); i != al.end(); ++ i)
          {
             if (i->first == m_iRouterKey)
                continue;
@@ -808,16 +734,16 @@ int Master::processUserJoin(SSLTransport& s, SSLTransport& secconn, const std::s
 
    if (key > 0)
    {
-      ActiveUser au;
-      au.m_strName = user;
-      au.m_strIP = ip;
-      au.m_iKey = key;
-      au.m_llLastRefreshTime = CTimer::getTime();
+      User* au = new User;
+      au->m_strName = user;
+      au->m_strIP = ip;
+      au->m_iKey = key;
+      au->m_llLastRefreshTime = CTimer::getTime();
 
-      s.recv((char*)&au.m_iPort, 4);
-      s.recv((char*)&au.m_iDataPort, 4);
-      s.recv((char*)au.m_pcKey, 16);
-      s.recv((char*)au.m_pcIV, 8);
+      s.recv((char*)&au->m_iPort, 4);
+      s.recv((char*)&au->m_iDataPort, 4);
+      s.recv((char*)au->m_pcKey, 16);
+      s.recv((char*)au->m_pcIV, 8);
 
       s.send((char*)&m_iTopoDataSize, 4);
       if (m_iTopoDataSize > 0)
@@ -831,7 +757,7 @@ int Master::processUserJoin(SSLTransport& s, SSLTransport& secconn, const std::s
       {
          buf = new char[size];
          secconn.recv(buf, size);
-         au.deserialize(au.m_vstrReadList, buf);
+         au->deserialize(au->m_vstrReadList, buf);
          delete [] buf;
       }
 
@@ -840,15 +766,15 @@ int Master::processUserJoin(SSLTransport& s, SSLTransport& secconn, const std::s
       {
          buf = new char[size];
          secconn.recv(buf, size);
-         au.deserialize(au.m_vstrWriteList, buf);
+         au->deserialize(au->m_vstrWriteList, buf);
          delete [] buf;
       }
 
       int32_t exec;
       secconn.recv((char*)&exec, 4);
-      au.m_bExec = exec;
+      au->m_bExec = exec;
 
-      m_mActiveUser[au.m_iKey] = au;
+      m_UserManager.insert(au);
 
       char text[128];
       sprintf(text, "User %s login from %s", user, ip.c_str());
@@ -858,9 +784,11 @@ int Master::processUserJoin(SSLTransport& s, SSLTransport& secconn, const std::s
       {
          // send the list of masters to the new users
          s.send((char*)&m_iRouterKey, 4);
-         int num = m_Routing.m_mAddressList.size() - 1;
+         int num = m_Routing.getNumOfMasters() - 1;
          s.send((char*)&num, 4);
-         for (map<uint32_t, Address>::iterator i = m_Routing.m_mAddressList.begin(); i != m_Routing.m_mAddressList.end(); ++ i)
+         map<uint32_t, Address> al;
+         m_Routing.getListOfMasters(al);
+         for (map<uint32_t, Address>::iterator i = al.begin(); i != al.end(); ++ i)
          {
             if (i->first == m_iRouterKey)
                continue;
@@ -906,9 +834,11 @@ int Master::processMasterJoin(SSLTransport& s, SSLTransport& secconn, const std:
       s.recv((char*)&key, 4);
 
       // send master list
-      int num = m_Routing.m_mAddressList.size() - 1;
+      int num = m_Routing.getNumOfMasters() - 1;
       s.send((char*)&num, 4);
-      for (map<uint32_t, Address>::iterator i = m_Routing.m_mAddressList.begin(); i != m_Routing.m_mAddressList.end(); ++ i)
+      map<uint32_t, Address> al;
+      m_Routing.getListOfMasters(al);
+      for (map<uint32_t, Address>::iterator i = al.begin(); i != al.end(); ++ i)
       {
          if (i->first == m_iRouterKey)
             continue;
@@ -921,32 +851,25 @@ int Master::processMasterJoin(SSLTransport& s, SSLTransport& secconn, const std:
       }
 
       // send slave list
-      num = m_SlaveManager.m_mSlaveList.size();
+      char* buf = NULL;
+      int32_t size = 0;
+      num = m_SlaveManager.serializeSlaveList(buf, size);
       s.send((char*)&num, 4);
-      for (map<int, SlaveNode>::iterator i = m_SlaveManager.m_mSlaveList.begin(); i != m_SlaveManager.m_mSlaveList.end(); ++ i)
-      {
-         s.send((char*)&i->first, 4);
-         int size = i->second.m_strIP.length() + 1;
-         s.send((char*)&size, 4);
-         s.send(i->second.m_strIP.c_str(), size);
-         s.send((char*)&i->second.m_iPort, 4);
-         s.send((char*)&i->second.m_iDataPort, 4);
-      }
+      s.send((char*)size, 4);
+      s.send(buf, size);
+      delete [] buf;
 
       // send user list
-      num = m_mActiveUser.size() - 1;
+      num = 0;
+      vector<char*> bufs;
+      vector<int> sizes;
+      m_UserManager.serializeUsers(num, bufs, sizes);
       s.send((char*)&num, 4);
-      for (map<int, ActiveUser>::iterator i = m_mActiveUser.begin(); i != m_mActiveUser.end(); ++ i)
+      for (int i = 0; i < num; ++ i)
       {
-         if (0 == i->first)
-            continue;
-
-         char* ubuf = NULL;
-         int size = 0;
-         i->second.serialize(ubuf, size);
-         s.send((char*)&size, 4);
-         s.send(ubuf, size);
-         delete [] ubuf;
+         s.send((char*)&sizes[i], 4);
+         s.send(bufs[i], sizes[i]);
+         delete [] bufs[i];
       }
 
       // send metadata
@@ -954,13 +877,13 @@ int Master::processMasterJoin(SSLTransport& s, SSLTransport& secconn, const std:
 
       struct stat st;
       stat((m_strHomeDir + ".tmp/master_meta.dat").c_str(), &st);
-      int32_t size = st.st_size;
+      size = st.st_size;
       s.send((char*)&size, 4);
       s.sendfile((m_strHomeDir + ".tmp/master_meta.dat").c_str(), 0, size);
       unlink((m_strHomeDir + ".tmp/master_meta.dat").c_str());
 
       // send new master info to all existing masters
-      for (map<uint32_t, Address>::iterator i = m_Routing.m_mAddressList.begin(); i != m_Routing.m_mAddressList.end(); ++ i)
+      for (map<uint32_t, Address>::iterator i = al.begin(); i != al.end(); ++ i)
       {
          SectorMsg msg;
          msg.setKey(0);
@@ -977,16 +900,14 @@ int Master::processMasterJoin(SSLTransport& s, SSLTransport& secconn, const std:
       m_Routing.insert(key, addr);
 
       // send new master info to all slaves
-      for (map<int, SlaveNode>::iterator i = m_SlaveManager.m_mSlaveList.begin(); i != m_SlaveManager.m_mSlaveList.end(); ++ i)
-      {
-         SectorMsg msg;
-         msg.setKey(0);
-         msg.setType(1001);
-         msg.setData(0, (char*)&key, 4);
-         msg.setData(4, masterIP, strlen(masterIP) + 1);
-         msg.setData(68, (char*)&masterPort, 4);
-         m_GMP.rpc(i->second.m_strIP.c_str(), i->second.m_iPort, &msg, &msg);
-      }
+      SectorMsg msg;
+      msg.setKey(0);
+      msg.setType(1001);
+      msg.setData(0, (char*)&key, 4);
+      msg.setData(4, masterIP, strlen(masterIP) + 1);
+      msg.setData(68, (char*)&masterPort, 4);
+      m_SlaveManager.updateSlaveList(m_vSlaveList, m_llLastUpdateTime);
+      m_GMP.multi_rpc(m_vSlaveList, &msg);
    }
 
    return 0;
@@ -1008,13 +929,12 @@ void* Master::process(void* s)
          continue;
 
       int32_t key = msg->getKey();
-      map<int, ActiveUser>::iterator i = self->m_mActiveUser.find(key);
-      if (i == self->m_mActiveUser.end())
+      User* user = self->m_UserManager.lookup(key);
+      if (NULL == user)
       {
          self->reject(ip, port, id, SectorError::E_EXPIRED);
          continue;
       }
-      ActiveUser* user = &(i->second);
 
       bool secure = false;
 
@@ -1031,7 +951,7 @@ void* Master::process(void* s)
          Address addr;
          addr.m_strIP = ip;
          addr.m_iPort = port;
-         if (self->m_SlaveManager.m_mAddrList.end() != self->m_SlaveManager.m_mAddrList.find(addr))
+         if (self->m_SlaveManager.getSlaveID(addr) >= 0)
             secure = true;
          else if (self->m_Routing.getRouterID(addr) >= 0)
             secure = true;
@@ -1075,7 +995,7 @@ void* Master::process(void* s)
    return NULL;
 }
 
-int Master::processSysCmd(const string& ip, const int port, const ActiveUser* user, const int32_t key, int id, SectorMsg* msg)
+int Master::processSysCmd(const string& ip, const int port, const User* user, const int32_t key, int id, SectorMsg* msg)
 {
    // internal system commands
 
@@ -1115,14 +1035,16 @@ int Master::processSysCmd(const string& ip, const int port, const ActiveUser* us
             m_sstrOnReplicate.erase(attr.m_strName);
          }
       }
-
       // send file changes to all other masters
-      SectorMsg newmsg;
-      newmsg.setData(0, (char*)&change, 4);
-      newmsg.setData(4, ip.c_str(), 64);
-      newmsg.setData(68, (char*)&port, 4);
-      newmsg.setData(72, msg->getData() + 12, msg->m_iDataLength - 12);
-      sync(newmsg.getData(), newmsg.m_iDataLength, 1100);
+      if (m_Routing.getNumOfMasters() > 1)
+      {
+         SectorMsg newmsg;
+         newmsg.setData(0, (char*)&change, 4);
+         newmsg.setData(4, ip.c_str(), 64);
+         newmsg.setData(68, (char*)&port, 4);
+         newmsg.setData(72, msg->getData() + 12, msg->m_iDataLength - 12);
+         sync(newmsg.getData(), newmsg.m_iDataLength, 1100);
+      }
 
       // unlock the file, if this is a file operation
       // update transaction status, if this is a file operation; if it is sphere, a final sphere report will be sent, see #4.
@@ -1137,7 +1059,6 @@ int Master::processSysCmd(const string& ip, const int port, const ActiveUser* us
       //if (r < 0)
       //   msg->setType(-msg->getType());
       m_GMP.sendto(ip, port, id, msg);
-
       pthread_mutex_lock(&m_ReplicaLock);
       if (!m_vstrToBeReplicated.empty())
          pthread_cond_signal(&m_ReplicaCond);
@@ -1152,7 +1073,8 @@ int Master::processSysCmd(const string& ip, const int port, const ActiveUser* us
       sprintf(text, "User %s logout from %s.", user->m_strName.c_str(), ip.c_str());
       m_SectorLog.insert(text);
 
-      m_mActiveUser.erase(key);
+      m_UserManager.remove(key);
+
       m_GMP.sendto(ip, port, id, msg);
 
       break;
@@ -1197,19 +1119,10 @@ int Master::processSysCmd(const string& ip, const int port, const ActiveUser* us
 
       // the slave votes slow slaves
       int num = *(int*)(msg->getData() + 8);
-      Address addr;
-      addr.m_strIP = ip;
-      addr.m_iPort = port;
-      int voter = m_SlaveManager.m_mAddrList[addr];
-      vector<Address> bad;
-      for (int i = 0; i < num; ++ i)
-      {
-         addr.m_strIP = msg->getData() + 12 + i * 68;
-         addr.m_iPort = *(int*)(msg->getData() + 12 + i * 68 + 64);
-
-         int slave = m_SlaveManager.m_mAddrList[addr];
-         m_SlaveManager.m_mSlaveList[slave].m_sBadVote.insert(voter);
-      }
+      Address voter;
+      voter.m_strIP = ip;
+      voter.m_iPort = port;
+      m_SlaveManager.voteBadSlaves(voter, num, msg->getData() + 12);
 
       m_TransManager.updateSlave(transid, slaveid);
 
@@ -1220,10 +1133,12 @@ int Master::processSysCmd(const string& ip, const int port, const ActiveUser* us
 
    case 5: //update master lists
    {
-      int num = m_Routing.m_mAddressList.size();
+      int num = m_Routing.getNumOfMasters() - 1;
       msg->setData(0, (char*)&num, 4);
       int p = 4;
-      for (map<uint32_t, Address>::iterator i = m_Routing.m_mAddressList.begin(); i != m_Routing.m_mAddressList.end(); ++ i)
+      map<uint32_t, Address> al;
+      m_Routing.getListOfMasters(al);
+      for (map<uint32_t, Address>::iterator i = al.begin(); i != al.end(); ++ i)
       {
          if (i->first == m_iRouterKey)
             continue;
@@ -1274,7 +1189,7 @@ int Master::processSysCmd(const string& ip, const int port, const ActiveUser* us
    return 0;
 }
 
-int Master::processFSCmd(const string& ip, const int port,  const ActiveUser* user, const int32_t key, int id, SectorMsg* msg)
+int Master::processFSCmd(const string& ip, const int port,  const User* user, const int32_t key, int id, SectorMsg* msg)
 {
    // 100+ storage system
 
@@ -1500,19 +1415,22 @@ int Master::processFSCmd(const string& ip, const int port,  const ActiveUser* us
       }
 
       // send file changes to all other masters
-      SectorMsg newmsg;
-      newmsg.setData(0, (char*)&rt, 4);
-      newmsg.setData(4, src.c_str(), src.length() + 1);
-      int pos = 4 + src.length() + 1;
-      if (rt < 0)
+      if (m_Routing.getNumOfMasters() > 1)
       {
-         newmsg.setData(pos, uplevel.c_str(), uplevel.length() + 1);
-         pos += uplevel.length() + 1;
-         newmsg.setData(pos, newname.c_str(), newname.length() + 1);
+         SectorMsg newmsg;
+         newmsg.setData(0, (char*)&rt, 4);
+         newmsg.setData(4, src.c_str(), src.length() + 1);
+         int pos = 4 + src.length() + 1;
+         if (rt < 0)
+         {
+            newmsg.setData(pos, uplevel.c_str(), uplevel.length() + 1);
+            pos += uplevel.length() + 1;
+            newmsg.setData(pos, newname.c_str(), newname.length() + 1);
+         }
+         else
+            newmsg.setData(pos, dst.c_str(), dst.length() + 1);
+         sync(newmsg.getData(), newmsg.m_iDataLength, 1104);
       }
-      else
-         newmsg.setData(pos, dst.c_str(), dst.length() + 1);
-      sync(newmsg.getData(), newmsg.m_iDataLength, 1104);
 
       m_GMP.sendto(ip, port, id, msg);
 
@@ -1566,10 +1484,11 @@ int Master::processFSCmd(const string& ip, const int port,  const ActiveUser* us
       }
       else
       {
-         for (map<int, SlaveNode>::iterator i = m_SlaveManager.m_mSlaveList.begin(); i != m_SlaveManager.m_mSlaveList.end(); ++ i)
+         m_SlaveManager.updateSlaveList(m_vSlaveList, m_llLastUpdateTime);
+         for (vector<Address>::iterator i = m_vSlaveList.begin(); i != m_vSlaveList.end(); ++ i)
          {
             int msgid = 0;
-            m_GMP.sendto(i->second.m_strIP.c_str(), i->second.m_iPort, msgid, msg);
+            m_GMP.sendto(i->m_strIP.c_str(), i->m_iPort, msgid, msg);
          }
       }
 
@@ -1698,10 +1617,13 @@ int Master::processFSCmd(const string& ip, const int port,  const ActiveUser* us
       m_pMetadata->utime(path, newts);
 
       // send file changes to all other masters
-      SectorMsg newmsg;
-      newmsg.setData(0, (char*)&newts, 8);
-      newmsg.setData(8, path.c_str(), path.length() + 1);
-      sync(newmsg.getData(), newmsg.m_iDataLength, 1107);
+      if (m_Routing.getNumOfMasters() > 1)
+      {
+         SectorMsg newmsg;
+         newmsg.setData(0, (char*)&newts, 8);
+         newmsg.setData(8, path.c_str(), path.length() + 1);
+         sync(newmsg.getData(), newmsg.m_iDataLength, 1107);
+      }
 
       msg->m_iDataLength = SectorMsg::m_iHdrSize;
       m_GMP.sendto(ip, port, id, msg);
@@ -1853,7 +1775,7 @@ int Master::processFSCmd(const string& ip, const int port,  const ActiveUser* us
    return 0;
 }
 
-int Master::processDCCmd(const string& ip, const int port,  const ActiveUser* user, const int32_t key, int id, SectorMsg* msg)
+int Master::processDCCmd(const string& ip, const int port,  const User* user, const int32_t key, int id, SectorMsg* msg)
 {
    // 200+ SPE
 
@@ -1917,12 +1839,19 @@ int Master::processDCCmd(const string& ip, const int port,  const ActiveUser* us
          break;
       }
 
+      //TODO: locate and pack SPE info in m_SlaveManager
+      vector<SlaveNode> sl;
+      Address client;
+      client.m_strIP = ip;
+      client.m_iPort = port;
+      m_SlaveManager.chooseSPENodes(client, sl);
+
       int c = 0;
-      for (map<int, SlaveNode>::iterator i = m_SlaveManager.m_mSlaveList.begin(); i != m_SlaveManager.m_mSlaveList.end(); ++ i)
+      for (vector<SlaveNode>::iterator i = sl.begin(); i != sl.end(); ++ i)
       {
-         msg->setData(c * 72, i->second.m_strIP.c_str(), i->second.m_strIP.length() + 1);
-         msg->setData(c * 72 + 64, (char*)&(i->second.m_iPort), 4);
-         msg->setData(c * 72 + 68, (char*)&(i->second.m_iDataPort), 4);
+         msg->setData(c * 72, i->m_strIP.c_str(), i->m_strIP.length() + 1);
+         msg->setData(c * 72 + 64, (char*)&(i->m_iPort), 4);
+         msg->setData(c * 72 + 68, (char*)&(i->m_iDataPort), 4);
          c ++;
       }
 
@@ -1947,7 +1876,7 @@ int Master::processDCCmd(const string& ip, const int port,  const ActiveUser* us
       addr.m_iPort = *(int32_t*)(msg->getData() + 64);
 
       int transid = m_TransManager.create(1, key, msg->getType(), "", 0);
-      int slaveid = m_SlaveManager.m_mAddrList[addr];
+      int slaveid = m_SlaveManager.getSlaveID(addr);
       m_TransManager.addSlave(transid, slaveid);
 
       msg->setData(0, ip.c_str(), ip.length() + 1);
@@ -1985,7 +1914,7 @@ int Master::processDCCmd(const string& ip, const int port,  const ActiveUser* us
       addr.m_iPort = *(int32_t*)(msg->getData() + 64);
 
       int transid = m_TransManager.create(1, key, msg->getType(), "", 0);
-      m_TransManager.addSlave(transid, m_SlaveManager.m_mAddrList[addr]);
+      m_TransManager.addSlave(transid, m_SlaveManager.getSlaveID(addr));
 
       msg->setData(0, ip.c_str(), ip.length() + 1);
       msg->setData(64, (char*)&port, 4);
@@ -2014,7 +1943,7 @@ int Master::processDCCmd(const string& ip, const int port,  const ActiveUser* us
    return 0;
 }
 
-int Master::processMCmd(const string& ip, const int port,  const ActiveUser* user, const int32_t key, int id, SectorMsg* msg)
+int Master::processMCmd(const string& ip, const int port,  const User* user, const int32_t key, int id, SectorMsg* msg)
 {
    switch (msg->getType())
    {
@@ -2033,7 +1962,7 @@ int Master::processMCmd(const string& ip, const int port,  const ActiveUser* use
 
    case 1005: // master probe
    {
-      if (*(int32_t*)msg->getData() != m_iRouterKey)
+      if (*(uint32_t*)msg->getData() != m_iRouterKey)
          msg->setType(-msg->getType());
       msg->m_iDataLength = SectorMsg::m_iHdrSize + 4;
       m_GMP.sendto(ip, port, id, msg);
@@ -2044,14 +1973,9 @@ int Master::processMCmd(const string& ip, const int port,  const ActiveUser* use
    {
       int32_t sid = *(int32_t*)msg->getData();
 
-      map<int, SlaveNode>::iterator s = m_SlaveManager.m_mSlaveList.find(sid);
-      if (s != m_SlaveManager.m_mSlaveList.end())
-      {
-         Address addr;
-         addr.m_strIP = s->second.m_strIP;
-         addr.m_iPort = s->second.m_iPort;
+      Address addr;
+      if (m_SlaveManager.getSlaveAddr(sid, addr) >= 0)
          m_pMetadata->substract("/", addr);
-      }
 
       m_SlaveManager.remove(sid);
 
@@ -2076,7 +2000,9 @@ int Master::sync(const char* fileinfo, const int& size, const int& type)
    msg.setData(0, fileinfo, size);
 
    // send file changes to all other masters
-   for (map<uint32_t, Address>::iterator i = m_Routing.m_mAddressList.begin(); i != m_Routing.m_mAddressList.end(); ++ i)
+   map<uint32_t, Address> al;
+   m_Routing.getListOfMasters(al);
+   for (map<uint32_t, Address>::iterator i = al.begin(); i != al.end(); ++ i)
    {
       if (i->first == m_iRouterKey)
          continue;
@@ -2087,7 +2013,7 @@ int Master::sync(const char* fileinfo, const int& size, const int& type)
    return 0;
 }
 
-int Master::processSyncCmd(const string& ip, const int port,  const ActiveUser* user, const int32_t key, int id, SectorMsg* msg)
+int Master::processSyncCmd(const string& ip, const int port,  const User* user, const int32_t key, int id, SectorMsg* msg)
 {
    switch (msg->getType())
    {
@@ -2191,7 +2117,7 @@ void* Master::replica(void* s)
 
       for (; r != self->m_vstrToBeReplicated.end(); ++ r)
       {
-         if (self->m_TransManager.getTotalTrans() + self->m_sstrOnReplicate.size() >= self->m_SlaveManager.getTotalSlaves())
+         if (self->m_TransManager.getTotalTrans() + self->m_sstrOnReplicate.size() >= self->m_SlaveManager.getNumberOfSlaves())
             break;
 
          int pos = r->find('\t');
@@ -2348,33 +2274,27 @@ void Master::loadSlaveAddr(const string& file)
 
 int Master::serializeSysStat(char*& buf, int& size)
 {
-   size = 52 + m_SlaveManager.m_Cluster.m_mSubCluster.size() * 48 + m_Routing.m_mAddressList.size() * 20 + m_SlaveManager.m_mSlaveList.size() * 72;
+   size = 52 + m_SlaveManager.getNumberOfClusters() * 48 + m_Routing.getNumOfMasters() * 20 + m_SlaveManager.getNumberOfSlaves() * 72;
    buf = new char[size];
 
    *(int64_t*)buf = m_llStartTime;
    *(int64_t*)(buf + 8) = m_SlaveManager.getTotalDiskSpace();
    *(int64_t*)(buf + 16) = m_pMetadata->getTotalDataSize("/");
    *(int64_t*)(buf + 24) = m_pMetadata->getTotalFileNum("/");
-   *(int64_t*)(buf + 32) = m_SlaveManager.getTotalSlaves();
+   *(int64_t*)(buf + 32) = m_SlaveManager.getNumberOfSlaves();
 
    char* p = buf + 40;
-   *(int32_t*)p = m_SlaveManager.m_Cluster.m_mSubCluster.size();
+   *(int32_t*)p = m_SlaveManager.getNumberOfClusters();
    p += 4;
-   for (map<int, Cluster>::iterator i = m_SlaveManager.m_Cluster.m_mSubCluster.begin(); i != m_SlaveManager.m_Cluster.m_mSubCluster.end(); ++ i)
-   {
-      *(int64_t*)p = i->second.m_iClusterID;
-      *(int64_t*)(p + 8) = i->second.m_iTotalNodes;
-      *(int64_t*)(p + 16) = i->second.m_llAvailDiskSpace;
-      *(int64_t*)(p + 24) = i->second.m_llTotalFileSize;
-      *(int64_t*)(p + 32) = i->second.m_llTotalInputData;
-      *(int64_t*)(p + 40) = i->second.m_llTotalOutputData;
+   int s = 0;
+   m_SlaveManager.serializeClusterInfo(p, s);
+   p += s;
 
-      p += 48;
-   }
-
-   *(int32_t*)p = m_Routing.m_mAddressList.size();
+   *(int32_t*)p = m_Routing.getNumOfMasters();
    p += 4;
-   for (map<uint32_t, Address>::iterator i = m_Routing.m_mAddressList.begin(); i != m_Routing.m_mAddressList.end(); ++ i)
+   map<uint32_t, Address> al;
+   m_Routing.getListOfMasters(al);
+   for (map<uint32_t, Address>::iterator i = al.begin(); i != al.end(); ++ i)
    {
       strcpy(p, i->second.m_strIP.c_str());
       p += 16;
@@ -2382,21 +2302,10 @@ int Master::serializeSysStat(char*& buf, int& size)
       p += 4;
    }
 
-   *(int32_t*)p = m_SlaveManager.m_mSlaveList.size();
+   *(int32_t*)p = m_SlaveManager.getNumberOfSlaves();
    p += 4;
-   for (map<int, SlaveNode>::iterator i = m_SlaveManager.m_mSlaveList.begin(); i != m_SlaveManager.m_mSlaveList.end(); ++ i)
-   {
-      strcpy(p, i->second.m_strIP.c_str());
-      *(int64_t*)(p + 16) = i->second.m_llAvailDiskSpace;
-      *(int64_t*)(p + 24) = i->second.m_llTotalFileSize;
-      *(int64_t*)(p + 32) = i->second.m_llCurrMemUsed;
-      *(int64_t*)(p + 40) = i->second.m_llCurrCPUUsed;
-      *(int64_t*)(p + 48) = i->second.m_llTotalInputData;
-      *(int64_t*)(p + 56) = i->second.m_llTotalOutputData;
-      *(int64_t*)(p + 64) = i->second.m_llTimeStamp;
-
-      p += 72;
-   }
+   s = 0;
+   m_SlaveManager.serializeSlaveInfo(p, s);
 
    return size;
 }

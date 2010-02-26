@@ -67,7 +67,6 @@ public:
    int getEntityID(const std::string& path);
 
    int getRouterID(const uint32_t& key);
-
    int getRouterID(const Address& node);
 
    bool match(const uint32_t& cid, const uint32_t& key);
@@ -75,7 +74,11 @@ public:
 
    int getPrimaryMaster(Address& node);
 
-public:
+   int getNumOfMasters();
+
+   void getListOfMasters(std::map<uint32_t, Address>& al);
+
+private:
    std::vector<uint32_t> m_vFingerTable;
    std::map<uint32_t, Address> m_mAddressList;
    std::map<Address, uint32_t, AddrComp> m_mKeyList;

@@ -351,6 +351,7 @@ int Slave::processSysCmd(const string& ip, const int port, int id, SectorMsg* ms
       msg->setData(32, (char*)&(m_SlaveStat.m_llCurrCPUUsed), 8);
       msg->setData(40, (char*)&(m_SlaveStat.m_llTotalInputData), 8);
       msg->setData(48, (char*)&(m_SlaveStat.m_llTotalOutputData), 8);
+
       int size = (m_SlaveStat.m_mSysIndInput.size() + m_SlaveStat.m_mSysIndOutput.size() + m_SlaveStat.m_mCliIndInput.size() + m_SlaveStat.m_mCliIndOutput.size()) * 24 + 16;
       char* buf = new char[size];
       m_SlaveStat.serializeIOStat(buf, size);

@@ -35,19 +35,21 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 02/16/2010
+   Yunhong Gu, last updated 02/25/2010
 *****************************************************************************/
 
 #include <slavemgmt.h>
 #include <unistd.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <cstring>
 #include <common.h>
 #include <meta.h>
 
 using namespace std;
 
-SlaveManager::SlaveManager()
+SlaveManager::SlaveManager():
+m_llLastUpdateTime(-1)
 {
    pthread_mutex_init(&m_SlaveLock, NULL);
 }
@@ -112,6 +114,8 @@ int SlaveManager::init(const char* topoconf)
       }
    }
 
+   m_llLastUpdateTime = CTimer::getTime();
+
    return 1;
 }
 
@@ -119,6 +123,9 @@ int SlaveManager::insert(SlaveNode& sn)
 {
    CGuard sg(m_SlaveLock);
 
+   sn.m_llLastUpdateTime = CTimer::getTime();
+   sn.m_iRetryNum = 0;
+   sn.m_llLastVoteTime = CTimer::getTime();
    sn.m_iStatus = 1;
 
    m_mSlaveList[sn.m_iNodeID] = sn;
@@ -148,6 +155,8 @@ int SlaveManager::insert(SlaveNode& sn)
       m_mIPFSInfo[sn.m_strIP].insert(Metadata::revisePath(sn.m_strStoragePath));
    else
       i->second.insert(sn.m_strStoragePath);
+
+   m_llLastUpdateTime = CTimer::getTime();
 
    return 1;
 }
@@ -200,6 +209,8 @@ int SlaveManager::remove(int nodeid)
    }
 
    m_mSlaveList.erase(sn);
+
+   m_llLastUpdateTime = CTimer::getTime();
 
    return 1;
 }
@@ -397,11 +408,291 @@ int SlaveManager::chooseIONode(set<Address, AddrComp>& loclist, const Address& c
    return chooseIONode(locid, client, mode, sl, replica);
 }
 
-unsigned int SlaveManager::getTotalSlaves()
+int SlaveManager::chooseSPENodes(const Address& client, vector<SlaveNode>& sl)
+{
+   for (map<int, SlaveNode>::iterator i = m_mSlaveList.begin(); i != m_mSlaveList.end(); ++ i)
+   {
+      sl.push_back(i->second);
+
+      //TODO:: exclude bad slaves
+      //TODO:: add more limitation to exclude nodes
+   }
+
+   return sl.size();
+}
+
+int SlaveManager::serializeTopo(char*& buf, int& size)
+{
+   CGuard sg(m_SlaveLock);
+
+   buf = NULL;
+   size = m_Topology.getTopoDataSize();
+   buf = new char[size];
+   m_Topology.serialize(buf, size);
+
+   return size;
+}
+
+int SlaveManager::updateSlaveList(vector<Address>& sl, int64_t& last_update_time)
+{
+   CGuard sg(m_SlaveLock);
+
+   if (last_update_time < m_llLastUpdateTime)
+   {
+      sl.clear();
+      for (map<int, SlaveNode>::iterator i = m_mSlaveList.begin(); i != m_mSlaveList.end(); ++ i)
+      {
+         Address addr;
+         addr.m_strIP = i->second.m_strIP;
+         addr.m_iPort = i->second.m_iPort;
+         sl.push_back(addr);
+      }
+   }
+
+   last_update_time = CTimer::getTime();
+
+   return sl.size();
+}
+
+int SlaveManager::updateSlaveInfo(const Address& addr, const char* info, const int& len)
+{
+   CGuard sg(m_SlaveLock);
+
+   map<Address, int, AddrComp>::iterator a = m_mAddrList.find(addr);
+   if (a == m_mAddrList.end())
+      return -1;
+
+   map<int, SlaveNode>::iterator s = m_mSlaveList.find(a->second);
+   if (s == m_mSlaveList.end())
+   {
+      //THIS SHOULD NOT HAPPEN
+      return -1;
+   }
+
+   s->second.m_llLastUpdateTime = CTimer::getTime();
+   s->second.deserialize(info, len);
+   s->second.m_iRetryNum = 0;
+
+   if (s->second.m_llAvailDiskSpace < 10000000000LL)
+   {
+      if (s->second.m_iStatus == 1)
+      {
+         //char text[64];
+         //sprintf(text, "Slave %s has less than 10GB available disk space left.", s->second.m_strIP.c_str());
+         //m_SectorLog.insert(text);
+
+         s->second.m_iStatus = 2;
+      }
+   }
+   else
+   {
+      if (s->second.m_iStatus == 2)
+         s->second.m_iStatus = 1;
+   }
+
+   return 0;
+}
+
+int SlaveManager::increaseRetryCount(const Address& addr)
+{
+   CGuard sg(m_SlaveLock);
+
+   map<Address, int, AddrComp>::iterator a = m_mAddrList.find(addr);
+   if (a == m_mAddrList.end())
+      return -1;
+
+   map<int, SlaveNode>::iterator s = m_mSlaveList.find(a->second);
+   if (s == m_mSlaveList.end())
+   {
+      //THIS SHOULD NOT HAPPEN
+      return -1;
+   }
+
+   s->second.m_iRetryNum ++;
+   return 0;
+}
+
+int SlaveManager::checkBadAndLost(map<int, Address>& bad, map<int, Address>& lost)
+{
+   CGuard sg(m_SlaveLock);
+
+   bad.clear();
+   lost.clear();
+
+   for (map<int, SlaveNode>::iterator i = m_mSlaveList.begin(); i != m_mSlaveList.end(); ++ i)
+   {
+      if (i->second.m_llLastVoteTime - CTimer::getTime() > 24LL * 60 * 3600 * 1000000)
+      {
+         i->second.m_sBadVote.clear();
+         i->second.m_llLastVoteTime = CTimer::getTime();
+      }
+
+      if (i->second.m_sBadVote.size() * 2 > m_mSlaveList.size())
+      {
+         bad[i->first].m_strIP = i->second.m_strIP;
+         bad[i->first].m_iPort = i->second.m_iPort;
+      }
+
+      if (i->second.m_iRetryNum > 10)
+      {
+         lost[i->first].m_strIP = i->second.m_strIP;
+         lost[i->first].m_iPort = i->second.m_iPort;
+      }
+   }
+
+   return 0;
+}
+
+int SlaveManager::serializeSlaveList(char*& buf, int& size)
+{
+   CGuard sg(m_SlaveLock);
+
+   buf = new char [(4 + 64 + 4 + 4) * m_mSlaveList.size()];
+
+   char* p = buf;
+   for (map<int, SlaveNode>::iterator i = m_mSlaveList.begin(); i != m_mSlaveList.end(); ++ i)
+   {
+      *(int32_t*)p = i->first;
+      p += 4;
+      *(int32_t*)p = i->second.m_strIP.length() + 1;
+      p += 4;
+      strcpy(p, i->second.m_strIP.c_str());
+      p += i->second.m_strIP.length() + 1;
+      *(int32_t*)p = i->second.m_iPort;
+      p += 4;
+      *(int32_t*)p = i->second.m_iDataPort;
+      p += 4;
+   }
+
+   size = p - buf;
+
+   return m_mSlaveList.size();
+}
+
+int SlaveManager::deserializeSlaveList(int num, const char* buf, int size)
+{
+   const char* p = buf;
+   for (int i = 0; i < num; ++ i)
+   {
+      SlaveNode sn;
+      sn.m_iNodeID = *(int32_t*)p;
+      p += 4;
+      int32_t size = *(int32_t*)p;
+      p += 4;
+      sn.m_strIP = p;
+      p += size;
+      sn.m_iPort = *(int32_t*)p;
+      p += 4;
+
+      insert(sn);
+   }
+
+   updateClusterStat();
+
+   return 0;
+}
+
+int SlaveManager::getSlaveID(const Address& addr)
+{
+   CGuard sg(m_SlaveLock);
+
+   map<Address, int, AddrComp>::const_iterator i = m_mAddrList.find(addr);
+
+   if (i == m_mAddrList.end())
+      return -1;
+
+   return i->second;
+}
+
+int SlaveManager::getSlaveAddr(const int& id, Address& addr)
+{
+   CGuard sg(m_SlaveLock);
+
+   map<int, SlaveNode>::iterator i = m_mSlaveList.find(id);
+
+   if (i == m_mSlaveList.end())
+      return -1;
+
+   addr.m_strIP = i->second.m_strIP;
+   addr.m_iPort = i->second.m_iPort;
+
+   return 0;
+}
+
+int SlaveManager::voteBadSlaves(const Address& voter, int num, const char* buf)
+{
+   CGuard sg(m_SlaveLock);
+
+   int vid = m_mAddrList[voter];
+   for (int i = 0; i < num; ++ i)
+   {
+      Address addr;
+      addr.m_strIP = buf + i * 68;
+      addr.m_iPort = *(int*)(buf + i * 68 + 64);
+
+      int slave = m_mAddrList[addr];
+      m_mSlaveList[slave].m_sBadVote.insert(vid);
+   }
+
+   return 0;
+}
+
+unsigned int SlaveManager::getNumberOfClusters()
+{
+   CGuard sg(m_SlaveLock);
+
+   return m_Cluster.m_mSubCluster.size();
+}
+
+unsigned int SlaveManager::getNumberOfSlaves()
 {
    CGuard sg(m_SlaveLock);
 
    return m_mSlaveList.size();
+}
+
+int SlaveManager::serializeClusterInfo(char* buf, int& size)
+{
+   CGuard sg(m_SlaveLock);
+
+   char* p = buf;
+   for (map<int, Cluster>::iterator i = m_Cluster.m_mSubCluster.begin(); i != m_Cluster.m_mSubCluster.end(); ++ i)
+   {
+      *(int64_t*)p = i->second.m_iClusterID;
+      *(int64_t*)(p + 8) = i->second.m_iTotalNodes;
+      *(int64_t*)(p + 16) = i->second.m_llAvailDiskSpace;
+      *(int64_t*)(p + 24) = i->second.m_llTotalFileSize;
+      *(int64_t*)(p + 32) = i->second.m_llTotalInputData;
+      *(int64_t*)(p + 40) = i->second.m_llTotalOutputData;
+
+      p += 48;
+   }
+
+   size = p - buf;
+   return size;
+}
+
+int SlaveManager::serializeSlaveInfo(char* buf, int& size)
+{
+   CGuard sg(m_SlaveLock);
+
+   char* p = buf;
+   for (map<int, SlaveNode>::iterator i = m_mSlaveList.begin(); i != m_mSlaveList.end(); ++ i)
+   {
+      strcpy(p, i->second.m_strIP.c_str());
+      *(int64_t*)(p + 16) = i->second.m_llAvailDiskSpace;
+      *(int64_t*)(p + 24) = i->second.m_llTotalFileSize;
+      *(int64_t*)(p + 32) = i->second.m_llCurrMemUsed;
+      *(int64_t*)(p + 40) = i->second.m_llCurrCPUUsed;
+      *(int64_t*)(p + 48) = i->second.m_llTotalInputData;
+      *(int64_t*)(p + 56) = i->second.m_llTotalOutputData;
+      *(int64_t*)(p + 64) = i->second.m_llTimeStamp;
+
+      p += 72;
+   }
+
+   size = p - buf;
+   return size;
 }
 
 uint64_t SlaveManager::getTotalDiskSpace()
@@ -410,9 +701,7 @@ uint64_t SlaveManager::getTotalDiskSpace()
 
    uint64_t size = 0;
    for (map<int, SlaveNode>::iterator i = m_mSlaveList.begin(); i != m_mSlaveList.end(); ++ i)
-   {
       size += i->second.m_llAvailDiskSpace;
-   }
 
    return size;
 }

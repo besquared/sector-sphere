@@ -63,9 +63,25 @@ public:
    int chooseIONode(std::set<int>& loclist, const Address& client, int mode, std::vector<SlaveNode>& sl, int replica);
    int chooseReplicaNode(std::set<Address, AddrComp>& loclist, SlaveNode& sn, const int64_t& filesize);
    int chooseIONode(std::set<Address, AddrComp>& loclist, const Address& client, int mode, std::vector<SlaveNode>& sl, int replica);
+   int chooseSPENodes(const Address& client, std::vector<SlaveNode>& sl);
 
 public:
-   unsigned int getTotalSlaves();
+   int serializeTopo(char*& buf, int& size);
+   int updateSlaveList(std::vector<Address>& sl, int64_t& last_update_time);
+   int updateSlaveInfo(const Address& addr, const char* info, const int& len);
+   int increaseRetryCount(const Address& addr);
+   int checkBadAndLost(std::map<int, Address>& bad, std::map<int, Address>& lost);
+   int serializeSlaveList(char*& buf, int& size);
+   int deserializeSlaveList(int num, const char* buf, int size);
+   int getSlaveID(const Address& addr);
+   int getSlaveAddr(const int& id, Address& addr);
+   int voteBadSlaves(const Address& voter, int num, const char* buf);
+   unsigned int getNumberOfClusters();
+   unsigned int getNumberOfSlaves();
+   int serializeClusterInfo(char* buf, int& size);
+   int serializeSlaveInfo(char* buf, int& size);
+
+public:
    uint64_t getTotalDiskSpace();
    void updateClusterStat();
 
@@ -73,15 +89,16 @@ private:
    void updateclusterstat_(Cluster& c);
    void updateclusterio_(Cluster& c, std::map<std::string, int64_t>& data_in, std::map<std::string, int64_t>& data_out, int64_t& total);
 
-public:
+private:
    std::map<Address, int, AddrComp> m_mAddrList;		// list of slave addresses
    std::map<int, SlaveNode> m_mSlaveList;			// list of slaves
 
    Topology m_Topology;						// slave system topology definition
    Cluster m_Cluster;						// topology structure
 
-private:
    std::map<std::string, std::set<std::string> > m_mIPFSInfo;	// storage path on each slave node; used to avoid conflict
+
+   int64_t m_llLastUpdateTime;					// last update time on the slave list
 
 private:
    pthread_mutex_t m_SlaveLock;

@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 01/19/2010
+   Yunhong Gu, last updated 01/25/2010
 *****************************************************************************/
 
 
@@ -94,13 +94,13 @@ private:
 
    static void* process(void* s);
 
-   int processSysCmd(const std::string& ip, const int port,  const ActiveUser* user, const int32_t key, int id, SectorMsg* msg);
-   int processFSCmd(const std::string& ip, const int port,  const ActiveUser* user, const int32_t key, int id, SectorMsg* msg);
-   int processDCCmd(const std::string& ip, const int port,  const ActiveUser* user, const int32_t key, int id, SectorMsg* msg);
-   int processMCmd(const std::string& ip, const int port,  const ActiveUser* user, const int32_t key, int id, SectorMsg* msg);
+   int processSysCmd(const std::string& ip, const int port,  const User* user, const int32_t key, int id, SectorMsg* msg);
+   int processFSCmd(const std::string& ip, const int port,  const User* user, const int32_t key, int id, SectorMsg* msg);
+   int processDCCmd(const std::string& ip, const int port,  const User* user, const int32_t key, int id, SectorMsg* msg);
+   int processMCmd(const std::string& ip, const int port,  const User* user, const int32_t key, int id, SectorMsg* msg);
 
    int sync(const char* fileinfo, const int& size, const int& type);
-   int processSyncCmd(const std::string& ip, const int port,  const ActiveUser* user, const int32_t key, int id, SectorMsg* msg);
+   int processSyncCmd(const std::string& ip, const int port,  const User* user, const int32_t key, int id, SectorMsg* msg);
 
 private:
    inline void reject(const std::string& ip, const int port, int id, int32_t code);
@@ -125,11 +125,15 @@ private:
 
    SectorLog m_SectorLog;				// sector log
 
-   int m_iMaxActiveUser;				// maximum number of active users allowed
-   std::map<int, ActiveUser> m_mActiveUser;		// list of active users
+   Metadata* m_pMetadata;                               // metadata
 
-   Metadata* m_pMetadata;				// metadata
+   int m_iMaxActiveUser;				// maximum number of active users allowed
+   UserManager m_UserManager;				// user management
+
    SlaveManager m_SlaveManager;				// slave management
+   std::vector<Address> m_vSlaveList;			// list of slave addresses
+   int64_t m_llLastUpdateTime;				// last update time for the slave list;
+
    TransManager m_TransManager;				// transaction management
 
    enum Status {INIT, RUNNING, STOPPED} m_Status;	// system status

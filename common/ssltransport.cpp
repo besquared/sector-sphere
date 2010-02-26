@@ -96,7 +96,7 @@ int SSLTransport::initServerCTX(const char* cert, const char* key)
    m_pCTX = SSL_CTX_new(TLSv1_server_method());
    if (m_pCTX == NULL)
    {
-      cerr << "Failed init CTX. Aborting.\n";
+      cerr << "Failed to init CTX. Aborting.\n";
       return SectorError::E_INITCTX;
    }
 
@@ -215,7 +215,7 @@ int SSLTransport::connect(const char* host, const int& port)
 
    if (SSL_get_verify_result(m_pSSL) != X509_V_OK)
    {
-      cerr << "failed verify SSL certificate.\n";
+      cerr << "failed to verify SSL certificate.\n";
       return SectorError::E_SECURITY;
    }
 
