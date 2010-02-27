@@ -541,6 +541,7 @@ void* Master::serviceEx(void* param)
       if (s->recv((char*)&cmd, 4) < 0)
       {
          s->close();
+         delete s;
          continue;
       }
 
@@ -552,6 +553,7 @@ void* Master::serviceEx(void* param)
          {
             cmd = SectorError::E_NOSECSERV;
             s->close();
+            delete s;
             continue;
          }
 
@@ -574,6 +576,7 @@ void* Master::serviceEx(void* param)
       }
 
       s->close();
+      delete s;
    }
 
    secconn.close();

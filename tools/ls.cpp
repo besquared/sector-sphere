@@ -56,26 +56,14 @@ int main(int argc, char** argv)
       ctime_r(&t, buf);
       for (char* p = buf; *p != '\n'; ++ p)
          cout << *p;
-      cout << "\t";
 
       if (i->m_bIsDir)
-         cout << setiosflags(ios::right) << setw(8) << "<dir>" << "\t";
+         cout << setiosflags(ios::right) << setw(16) << "<dir>" << "          ";
       else
-         cout << setiosflags(ios::right) << setw(8) << i->m_llSize << " bytes\t";
+         cout << setiosflags(ios::right) << setw(16) << i->m_llSize << " bytes    ";
 
       setiosflags(ios::left);
       cout << i->m_strName << endl;
-
-/*
-      cout << setiosflags(ios::left) << setw(24) << i->m_strName << "\t";
-      if (i->m_bIsDir)
-         cout << "<dir>" << endl;
-      else
-      {
-         time_t t = i->m_llTimeStamp;
-         cout << i->m_llSize << " bytes " << "\t" << ctime(&t);
-      }
-*/
    }
 
    client.logout();
