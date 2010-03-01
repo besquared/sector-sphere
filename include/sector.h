@@ -46,6 +46,7 @@ written by
 #include <string>
 #include <map>
 #include <set>
+#include <stdint.h>
 
 struct Address
 {
