@@ -861,7 +861,7 @@ int Master::processMasterJoin(SSLTransport& s, SSLTransport& secconn, const std:
       int32_t size = 0;
       num = m_SlaveManager.serializeSlaveList(buf, size);
       s.send((char*)&num, 4);
-      s.send((char*)size, 4);
+      s.send((char*)&size, 4);
       s.send(buf, size);
       delete [] buf;
 

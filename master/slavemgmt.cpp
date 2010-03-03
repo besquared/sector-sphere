@@ -547,7 +547,7 @@ int SlaveManager::serializeSlaveList(char*& buf, int& size)
 {
    CGuard sg(m_SlaveLock);
 
-   buf = new char [(4 + 64 + 4 + 4) * m_mSlaveList.size()];
+   buf = new char [(4 + 4 + 64 + 4 + 4) * m_mSlaveList.size()];
 
    char* p = buf;
    for (map<int, SlaveNode>::iterator i = m_mSlaveList.begin(); i != m_mSlaveList.end(); ++ i)
@@ -582,6 +582,8 @@ int SlaveManager::deserializeSlaveList(int num, const char* buf, int size)
       sn.m_strIP = p;
       p += size;
       sn.m_iPort = *(int32_t*)p;
+      p += 4;
+      sn.m_iDataPort = *(int32_t*)p;
       p += 4;
 
       insert(sn);

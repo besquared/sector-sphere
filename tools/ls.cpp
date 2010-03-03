@@ -46,9 +46,13 @@ int main(int argc, char** argv)
       return -1;
    }
 
+   // show directory first
    for (vector<SNode>::iterator i = filelist.begin(); i != filelist.end(); ++ i)
    {
       if (wc && !WildCard::match(orig, i->m_strName))
+         continue;
+
+      if (!i->m_bIsDir)
          continue;
 
       time_t t = i->m_llTimeStamp;
@@ -57,10 +61,28 @@ int main(int argc, char** argv)
       for (char* p = buf; *p != '\n'; ++ p)
          cout << *p;
 
+      cout << setiosflags(ios::right) << setw(16) << "<dir>" << "          ";
+
+      setiosflags(ios::left);
+      cout << i->m_strName << endl;
+   }
+
+   // then show regular files
+   for (vector<SNode>::iterator i = filelist.begin(); i != filelist.end(); ++ i)
+   {
+      if (wc && !WildCard::match(orig, i->m_strName))
+         continue;
+
       if (i->m_bIsDir)
-         cout << setiosflags(ios::right) << setw(16) << "<dir>" << "          ";
-      else
-         cout << setiosflags(ios::right) << setw(16) << i->m_llSize << " bytes    ";
+         continue;
+
+      time_t t = i->m_llTimeStamp;
+      char buf[64];
+      ctime_r(&t, buf);
+      for (char* p = buf; *p != '\n'; ++ p)
+         cout << *p;
+
+      cout << setiosflags(ios::right) << setw(16) << i->m_llSize << " bytes    ";
 
       setiosflags(ios::left);
       cout << i->m_strName << endl;
