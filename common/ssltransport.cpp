@@ -57,7 +57,6 @@ int SSLTransport::g_iInstance = 0;
 SSLTransport::SSLTransport():
 m_pCTX(NULL),
 m_pSSL(NULL),
-m_pBIO(NULL),
 m_iSocket(0),
 m_bConnected(false)
 {
@@ -65,12 +64,10 @@ m_bConnected(false)
 
 SSLTransport::~SSLTransport()
 {
-   if (NULL != m_pCTX)
-      SSL_CTX_free(m_pCTX);
    if (NULL != m_pSSL)
       SSL_free(m_pSSL);
-   //if (NULL != m_pBIO)
-   //   BIO_free(m_pBIO);
+   //if (NULL != m_pCTX)
+   //   SSL_CTX_free(m_pCTX);
 }
 
 void SSLTransport::init()
@@ -78,7 +75,6 @@ void SSLTransport::init()
    if (0 == g_iInstance)
    {
       SSL_load_error_strings();
-      ERR_load_BIO_strings();
       ERR_load_SSL_strings();
       SSL_library_init();
    }
@@ -169,9 +165,8 @@ SSLTransport* SSLTransport::accept(char* ip, int& port)
    inet_ntop(AF_INET, &(addr.sin_addr), ip, 64);
    port = addr.sin_port;
 
-   t->m_pBIO = BIO_new_socket(t->m_iSocket, BIO_NOCLOSE);
    t->m_pSSL = SSL_new(m_pCTX);
-   SSL_set_bio(t->m_pSSL, t->m_pBIO, t->m_pBIO);
+   SSL_set_fd(t->m_pSSL, t->m_iSocket);
 
    if (SSL_accept(t->m_pSSL) <= 0)
       return NULL;
@@ -207,8 +202,7 @@ int SSLTransport::connect(const char* host, const int& port)
    }
 
    m_pSSL = SSL_new(m_pCTX);
-   m_pBIO = BIO_new_socket(m_iSocket, BIO_NOCLOSE);
-   SSL_set_bio(m_pSSL, m_pBIO, m_pBIO);
+   SSL_set_fd(m_pSSL, m_iSocket);
 
    if (SSL_connect(m_pSSL) <= 0)
       return SectorError::E_SECURITY;
@@ -237,6 +231,8 @@ int SSLTransport::close()
 {
    if (!m_bConnected)
       return 0;
+
+   SSL_shutdown(m_pSSL);
 
    m_bConnected = false;
    return ::close(m_iSocket);

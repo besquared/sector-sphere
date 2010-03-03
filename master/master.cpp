@@ -102,6 +102,7 @@ int Master::init()
    {
       if (errno != ENOENT)
       {
+         cerr << "unable to configure home directory.\n";
          m_SectorLog.insert("unable to configure home directory.");
          return -1;
       }
@@ -165,6 +166,7 @@ int Master::init()
    SSLTransport secconn;
    if (secconn.initClientCTX("../conf/security_node.cert") < 0)
    {
+      cerr << "No security node certificate found.\n";
       m_SectorLog.insert("No security node certificate found.");
       return -1;
    }
@@ -172,6 +174,7 @@ int Master::init()
    if (secconn.connect(m_SysConfig.m_strSecServIP.c_str(), m_SysConfig.m_iSecServPort) < 0)
    {
       secconn.close();
+      cerr << "Failed to find security server.\n";
       m_SectorLog.insert("Failed to find security server.");
       return -1;
    }
@@ -920,14 +923,22 @@ void* Master::process(void* s)
 {
    Master* self = (Master*)s;
 
-   string ip;
-   int port;
-   int32_t id;
-   SectorMsg* msg = new SectorMsg;
-   msg->resize(65536);
+   const int ProcessWorker = 4;
+   for (int i = 0; i < ProcessWorker; ++ i)
+   {
+      pthread_t t;
+      pthread_create(&t, NULL, processEx, self);
+      pthread_detach(t);
+   }
 
    while (self->m_Status == RUNNING)
    {
+      string ip;
+      int port;
+      int32_t id;
+      SectorMsg* msg = new SectorMsg;
+      //msg->resize(65536);
+
       if (self->m_GMP.recvfrom(ip, port, id, msg) < 0)
          continue;
 
@@ -966,34 +977,59 @@ void* Master::process(void* s)
          continue;
       }
 
-      switch (msg->getType() / 100)
+      ProcessJobParam* p = new ProcessJobParam;
+      p->ip = ip;
+      p->port = port;
+      p->user = user;
+      p->key = key;
+      p->id = id;
+      p->msg = msg;
+
+      self->m_ProcessJobQueue.push(p);
+   }
+
+   return NULL;
+}
+
+void* Master::processEx(void* param)
+{
+   Master* self = (Master*)param;
+
+   while (true)
+   {
+      ProcessJobParam* p = (ProcessJobParam*)self->m_ProcessJobQueue.pop();
+      if (NULL == p)
+         break;
+
+      switch (p->msg->getType() / 100)
       {
       case 0:
-         self->processSysCmd(ip, port, user, key, id, msg);
+         self->processSysCmd(p->ip, p->port, p->user, p->key, p->id, p->msg);
          break;
 
       case 1:
-         self->processFSCmd(ip, port, user, key, id, msg);
+         self->processFSCmd(p->ip, p->port, p->user, p->key, p->id, p->msg);
          break;
 
       case 2:
-         self->processDCCmd(ip, port, user, key, id, msg);
+         self->processDCCmd(p->ip, p->port, p->user, p->key, p->id, p->msg);
          break;
 
       case 10:
-         self->processMCmd(ip, port, user, key, id, msg);
+         self->processMCmd(p->ip, p->port, p->user, p->key, p->id, p->msg);
          break;
 
       case 11:
-         self->processSyncCmd(ip, port, user, key, id, msg);
+         self->processSyncCmd(p->ip, p->port, p->user, p->key, p->id, p->msg);
          break;
 
       default:
-         self->reject(ip, port, id, SectorError::E_UNKNOWN);
+         self->reject(p->ip, p->port, p->id, SectorError::E_UNKNOWN);
       }
-   }
 
-   delete msg;
+      delete p->msg;
+      delete p;
+   }
 
    return NULL;
 }

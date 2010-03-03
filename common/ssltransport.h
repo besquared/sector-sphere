@@ -77,7 +77,6 @@ public:
 private:
    SSL_CTX* m_pCTX;
    SSL* m_pSSL;
-   BIO* m_pBIO;
    int m_iSocket;
 
    bool m_bConnected;

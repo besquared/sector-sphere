@@ -77,28 +77,34 @@ public:
 
 private:
    ThreadJobQueue m_ServiceJobQueue;			// job queue for service thread pool
-
    struct ServiceJobParam
    {
       std::string ip;
       int port;
       SSLTransport* ssl;
    };
-
    static void* service(void* s);
    static void* serviceEx(void* p);
-
    int processSlaveJoin(SSLTransport& s, SSLTransport& secconn, const std::string& ip);
    int processUserJoin(SSLTransport& s, SSLTransport& secconn, const std::string& ip);
    int processMasterJoin(SSLTransport& s, SSLTransport& secconn, const std::string& ip);
 
+   ThreadJobQueue m_ProcessJobQueue;
+   struct ProcessJobParam
+   {
+      std::string ip;
+      int port;
+      User* user;
+      int key;
+      int id;
+      SectorMsg* msg;
+   };
    static void* process(void* s);
-
+   static void* processEx(void* p);
    int processSysCmd(const std::string& ip, const int port,  const User* user, const int32_t key, int id, SectorMsg* msg);
    int processFSCmd(const std::string& ip, const int port,  const User* user, const int32_t key, int id, SectorMsg* msg);
    int processDCCmd(const std::string& ip, const int port,  const User* user, const int32_t key, int id, SectorMsg* msg);
    int processMCmd(const std::string& ip, const int port,  const User* user, const int32_t key, int id, SectorMsg* msg);
-
    int sync(const char* fileinfo, const int& size, const int& type);
    int processSyncCmd(const std::string& ip, const int port,  const User* user, const int32_t key, int id, SectorMsg* msg);
 
