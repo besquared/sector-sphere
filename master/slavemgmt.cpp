@@ -209,6 +209,7 @@ int SlaveManager::remove(int nodeid)
    }
 
    m_mSlaveList.erase(sn);
+   m_siBadSlaves.erase(nodeid);
 
    m_llLastUpdateTime = CTimer::getTime();
 
@@ -244,6 +245,10 @@ int SlaveManager::chooseReplicaNode(set<int>& loclist, SlaveNode& sn, const int6
    avail.resize(m_Topology.m_uiLevel + 1);
    for (map<int, SlaveNode>::iterator i = m_mSlaveList.begin(); i != m_mSlaveList.end(); ++ i)
    {
+      // skip bad slaves
+      if (m_siBadSlaves.find(i->first) != m_siBadSlaves.end())
+         continue;
+
       // only nodes with more than 10GB disk space are chosen
       if (i->second.m_llAvailDiskSpace < (10000000000LL + filesize))
          continue;
@@ -313,7 +318,12 @@ int SlaveManager::chooseIONode(set<int>& loclist, const Address& client, int mod
       unsigned int dist = 1000000000;
       for (set<int>::iterator i = loclist.begin(); i != loclist.end(); ++ i)
       {
-         unsigned int d = m_Topology.distance(client.m_strIP.c_str(), m_mSlaveList[*i].m_strIP.c_str());
+         unsigned int d = 1000000000;
+
+         // do not choose bad node
+         if (m_siBadSlaves.find(*i) == m_siBadSlaves.end())
+            d = m_Topology.distance(client.m_strIP.c_str(), m_mSlaveList[*i].m_strIP.c_str());
+
          if (d < dist)
          {
             dist = d;
@@ -350,6 +360,10 @@ int SlaveManager::chooseIONode(set<int>& loclist, const Address& client, int mod
 
       for (map<int, SlaveNode>::iterator i = m_mSlaveList.begin(); i != m_mSlaveList.end(); ++ i)
       {
+         // skip bad slaves
+         if (m_siBadSlaves.find(i->first) != m_siBadSlaves.end())
+            continue;
+
          // only nodes with more than 10GB disk space are chosen
          if (i->second.m_llAvailDiskSpace > 10000000000LL)
             avail.insert(i->first);
@@ -412,10 +426,17 @@ int SlaveManager::chooseSPENodes(const Address& client, vector<SlaveNode>& sl)
 {
    for (map<int, SlaveNode>::iterator i = m_mSlaveList.begin(); i != m_mSlaveList.end(); ++ i)
    {
+      // skip bad slaves
+      if (m_siBadSlaves.find(i->first) != m_siBadSlaves.end())
+         continue;
+
+      // only nodes with more than 10GB disk space are chosen
+      if (i->second.m_llAvailDiskSpace < 10000000000LL)
+         continue;
+
       sl.push_back(i->second);
 
-      //TODO:: exclude bad slaves
-      //TODO:: add more limitation to exclude nodes
+      //TODO:: add more creteria to choose nodes
    }
 
    return sl.size();
@@ -521,12 +542,14 @@ int SlaveManager::checkBadAndLost(map<int, Address>& bad, map<int, Address>& los
 
    for (map<int, SlaveNode>::iterator i = m_mSlaveList.begin(); i != m_mSlaveList.end(); ++ i)
    {
+      // clear expired votes
       if (i->second.m_llLastVoteTime - CTimer::getTime() > 24LL * 60 * 3600 * 1000000)
       {
          i->second.m_sBadVote.clear();
          i->second.m_llLastVoteTime = CTimer::getTime();
       }
 
+      // if received more than half votes, it is bad
       if (i->second.m_sBadVote.size() * 2 > m_mSlaveList.size())
       {
          bad[i->first].m_strIP = i->second.m_strIP;

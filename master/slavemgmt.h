@@ -92,6 +92,7 @@ private:
 private:
    std::map<Address, int, AddrComp> m_mAddrList;		// list of slave addresses
    std::map<int, SlaveNode> m_mSlaveList;			// list of slaves
+   std::set<int> m_siBadSlaves;					// list of bad slaves
 
    Topology m_Topology;						// slave system topology definition
    Cluster m_Cluster;						// topology structure

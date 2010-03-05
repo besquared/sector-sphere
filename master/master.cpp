@@ -397,7 +397,7 @@ int Master::run()
       for (map<int, Address>::iterator i = bad.begin(); i != bad.end(); ++ i)
       {
          m_SectorLog.insert(("Bad slave detected " + i->second.m_strIP + ".").c_str());
-         //TODO: exclude bad nodes from future transactions, gradually move data out of those nodes
+         //TODO: create replica for files on the bade nodes, gradually move data out of those nodes
       }
 
       for (map<int, Address>::iterator i = lost.begin(); i != lost.end(); ++ i)
