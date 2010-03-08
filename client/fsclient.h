@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu [gu@lac.uic.edu], last updated 01/12/2010
+   Yunhong Gu [gu@lac.uic.edu], last updated 03/08/2010
 *****************************************************************************/
 
 #ifndef __SECTOR_FS_CLIENT_H__
@@ -56,12 +56,12 @@ public:
    int open(const std::string& filename, int mode = SF_MODE::READ, const std::string& hint = "");
    int64_t read(char* buf, const int64_t& size);
    int64_t write(const char* buf, const int64_t& size);
-   int download(const char* localpath, const bool& cont = false);
-   int upload(const char* localpath, const bool& cont = false);
+   int64_t download(const char* localpath, const bool& cont = false);
+   int64_t upload(const char* localpath, const bool& cont = false);
    int close();
 
-   int seekp(int64_t off, int pos = SF_POS::BEG);
-   int seekg(int64_t off, int pos = SF_POS::BEG);
+   int64_t seekp(int64_t off, int pos = SF_POS::BEG);
+   int64_t seekg(int64_t off, int pos = SF_POS::BEG);
    int64_t tellp();
    int64_t tellg();
    bool eof();

@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 01/12/2010
+   Yunhong Gu, last updated 03/08/2010
 *****************************************************************************/
 
 
@@ -239,7 +239,7 @@ int64_t FSClient::write(const char* buf, const int64_t& size)
    return sentsize;
 }
 
-int FSClient::download(const char* localpath, const bool& cont)
+int64_t FSClient::download(const char* localpath, const bool& cont)
 {
    CGuard fg(m_FileLock);
 
@@ -294,7 +294,7 @@ int FSClient::download(const char* localpath, const bool& cont)
    return realsize;
 }
 
-int FSClient::upload(const char* localpath, const bool& cont)
+int64_t FSClient::upload(const char* localpath, const bool& cont)
 {
    CGuard fg(m_FileLock);
 
@@ -359,7 +359,7 @@ int FSClient::close()
    return 0;
 }
 
-int FSClient::seekp(int64_t off, int pos)
+int64_t FSClient::seekp(int64_t off, int pos)
 {
    CGuard fg(m_FileLock);
 
@@ -384,10 +384,10 @@ int FSClient::seekp(int64_t off, int pos)
       break;
    }
 
-   return pos;
+   return m_llCurWritePos;
 }
 
-int FSClient::seekg(int64_t off, int pos)
+int64_t FSClient::seekg(int64_t off, int pos)
 {
    CGuard fg(m_FileLock);
 
@@ -412,7 +412,7 @@ int FSClient::seekg(int64_t off, int pos)
       break;
    }
 
-   return pos;
+   return m_llCurReadPos;
 }
 
 int64_t FSClient::tellp()
