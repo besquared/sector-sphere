@@ -123,6 +123,8 @@ private:
 
    int createReplica(const std::string& src, const std::string& dst);
 
+   int populateSpecialRep(const std::string& conf, std::map<std::string, int>& special);
+
 private:
    CGMP m_GMP;						// GMP messenger
 

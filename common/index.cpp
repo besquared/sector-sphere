@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 01/30/2010
+   Yunhong Gu, last updated 03/08/2010
 *****************************************************************************/
 
 
@@ -676,7 +676,7 @@ int Index::collectDataInfo(const string& file, vector<string>& result)
    return collectDataInfo(file, *currdir, result);
 }
 
-int Index::getUnderReplicated(const string& path, vector<string>& replica, const unsigned int& thresh)
+int Index::getUnderReplicated(const string& path, vector<string>& replica, const unsigned int& thresh, const map<string, int>& special)
 {
    CGuard mg(m_MetaLock);
 
@@ -695,7 +695,7 @@ int Index::getUnderReplicated(const string& path, vector<string>& replica, const
       currdir = &(s->second.m_mDirectory);
    }
 
-   return getUnderReplicated(path, *currdir, replica, thresh);
+   return getUnderReplicated(path, *currdir, replica, thresh, special);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -978,17 +978,29 @@ int Index::collectDataInfo(const string& path, map<string, SNode>& currdir, vect
    return result.size();
 }
 
-int Index::getUnderReplicated(const string& path, map<string, SNode>& currdir, vector<string>& replica, const unsigned int& thresh)
+int Index::getUnderReplicated(const string& path, map<string, SNode>& currdir, vector<string>& replica, const unsigned int& thresh, const map<string, int>& special)
 {
    for (map<string, SNode>::iterator i = currdir.begin(); i != currdir.end(); ++ i)
    {
+      string abs_path = path + "/" + i->first;
+
       if (!i->second.m_bIsDir)
       {
-         if (i->second.m_sLocation.size() < thresh)
-           replica.push_back(path + "/" + i->first);
+         unsigned int d = thresh;
+         for (map<string, int>::const_iterator s = special.begin(); s != special.end(); ++ s)
+         {
+            if (abs_path.find(s->first) != string::npos)
+            {
+               d = s->second;
+               break;
+            }
+         }
+
+         if (i->second.m_sLocation.size() < d)
+           replica.push_back(abs_path);
       }
       else
-         getUnderReplicated(path + "/" + i->first, i->second.m_mDirectory, replica, thresh);
+         getUnderReplicated(abs_path, i->second.m_mDirectory, replica, thresh, special);
    }
 
    return replica.size();

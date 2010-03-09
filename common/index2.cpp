@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 01/11/2009
+   Yunhong Gu, last updated 03/08/2010
 *****************************************************************************/
 
 
@@ -695,7 +695,7 @@ int Index2::collectDataInfo(const string& path, vector<string>& result)
    return result.size();
 }
 
-int Index2::getUnderReplicated(const string& path, vector<string>& replica, const unsigned int& thresh)
+int Index2::getUnderReplicated(const string& path, vector<string>& replica, const unsigned int& thresh, const map<string, int>& special)
 {
    dirent **namelist;
    int n = scandir((m_strMetaPath + "/" + path).c_str(), &namelist, 0, alphasort);
@@ -715,15 +715,28 @@ int Index2::getUnderReplicated(const string& path, vector<string>& replica, cons
       if (stat((m_strMetaPath + "/" + path + "/" + namelist[i]->d_name).c_str(), &s) < 0)
          return -1;
 
+      string abs_path = path + "/" + namelist[i]->d_name;
+
       if (!S_ISDIR(s.st_mode))
       {
          SNode sn;
-         sn.deserialize2(m_strMetaPath + "/" + path + "/" + namelist[i]->d_name);
-         if (sn.m_sLocation.size() < thresh)
-            replica.push_back(path + "/" + namelist[i]->d_name);
+         sn.deserialize2(m_strMetaPath + "/" + abs_path);
+
+         unsigned int d = thresh;
+         for (map<string, int>::const_iterator s = special.begin(); s != special.end(); ++ s)
+         {
+            if (abs_path.find(s->first) != string::npos)
+            {
+               d = s->second;
+               break;
+            }
+         }
+
+         if (sn.m_sLocation.size() < d)
+            replica.push_back(abs_path);
       }
       else
-         getUnderReplicated(path + "/" + namelist[i]->d_name, replica, thresh);
+         getUnderReplicated(abs_path, replica, thresh, special);
 
       free(namelist[i]);
    }

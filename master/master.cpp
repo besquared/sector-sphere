@@ -44,6 +44,7 @@ written by
 #include <signal.h>
 #include <iostream>
 #include <stack>
+#include <sstream>
 #include "master.h"
 
 using namespace std;
@@ -454,9 +455,12 @@ int Master::run()
 
       // check replica, create or remove replicas if necessary
       // only the first master is responsible for replica checking
+      map<string, int> special;
+      populateSpecialRep("../conf/replica.conf", special);
+
       pthread_mutex_lock(&m_ReplicaLock);
       if (m_vstrToBeReplicated.empty())
-         m_pMetadata->getUnderReplicated("/", m_vstrToBeReplicated, m_SysConfig.m_iReplicaNum);
+         m_pMetadata->getUnderReplicated("/", m_vstrToBeReplicated, m_SysConfig.m_iReplicaNum, special);
       if (!m_vstrToBeReplicated.empty())
          pthread_cond_signal(&m_ReplicaCond);
       pthread_mutex_unlock(&m_ReplicaLock);
@@ -2347,4 +2351,42 @@ int Master::serializeSysStat(char*& buf, int& size)
    m_SlaveManager.serializeSlaveInfo(p, s);
 
    return size;
+}
+
+int Master::populateSpecialRep(const std::string& conf, std::map<std::string, int>& special)
+{
+   special.clear();
+
+   ifstream cf(conf.c_str());
+   if (cf.bad() || cf.fail())
+      return -1;
+
+   while (!cf.eof())
+   {
+      char buf[1024];
+      cf.getline(buf, 1024);
+      if ((0 == strlen(buf)) || ('#' == buf[0]))
+         continue;
+
+      stringstream ss (ios::in | ios::out);
+      ss << buf;
+      string path;
+      int thresh;
+      ss >> path >> thresh;
+
+      if (thresh <= 0)
+         continue;
+
+      string revised_path = Metadata::revisePath(path);
+      SNode sn;
+      if (m_pMetadata->lookup(revised_path, sn) < 0)
+         continue;
+
+      if (sn.m_bIsDir)
+         revised_path.append("/");
+
+      special[revised_path] = thresh;
+   }
+
+   return special.size();
 }

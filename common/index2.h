@@ -77,7 +77,7 @@ public:
    virtual int64_t getTotalDataSize(const std::string& path);
    virtual int64_t getTotalFileNum(const std::string& path);
    virtual int collectDataInfo(const std::string& path, std::vector<std::string>& result);
-   virtual int getUnderReplicated(const std::string& path, std::vector<std::string>& replica, const unsigned int& thresh);
+   virtual int getUnderReplicated(const std::string& path, std::vector<std::string>& replica, const unsigned int& thresh, const std::map<std::string, int>& special);
 
 private:
    int serialize(std::ofstream& ofs, const std::string& currdir, int level);

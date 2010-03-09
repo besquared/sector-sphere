@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright (c) 2005 - 2009, The Board of Trustees of the University of Illinois.
+Copyright (c) 2005 - 2010, The Board of Trustees of the University of Illinois.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 10/12/2009
+   Yunhong Gu, last updated 03/08/2010
 *****************************************************************************/
 
 
@@ -77,7 +77,7 @@ public:
    virtual int64_t getTotalDataSize(const std::string& path);
    virtual int64_t getTotalFileNum(const std::string& path);
    virtual int collectDataInfo(const std::string& path, std::vector<std::string>& result);
-   virtual int getUnderReplicated(const std::string& path, std::vector<std::string>& replica, const unsigned int& thresh);
+   virtual int getUnderReplicated(const std::string& path, std::vector<std::string>& replica, const unsigned int& thresh, const std::map<std::string, int>& special);
 
 private:
    int serialize(std::ofstream& ofs, std::map<std::string, SNode>& currdir, int level);
@@ -88,7 +88,7 @@ private:
    int64_t getTotalDataSize(std::map<std::string, SNode>& currdir);
    int64_t getTotalFileNum(std::map<std::string, SNode>& currdir);
    int collectDataInfo(const std::string& path, std::map<std::string, SNode>& currdir, std::vector<std::string>& result);
-   int getUnderReplicated(const std::string& path, std::map<std::string, SNode>& currdir, std::vector<std::string>& replica, const unsigned int& thresh);
+   int getUnderReplicated(const std::string& path, std::map<std::string, SNode>& currdir, std::vector<std::string>& replica, const unsigned int& thresh, const std::map<std::string, int>& special);
    int list_r(std::map<std::string, SNode>& currdir, const std::string& path, std::vector<std::string>& filelist);
 
 private:
