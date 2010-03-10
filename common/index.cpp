@@ -982,7 +982,11 @@ int Index::getUnderReplicated(const string& path, map<string, SNode>& currdir, v
 {
    for (map<string, SNode>::iterator i = currdir.begin(); i != currdir.end(); ++ i)
    {
-      string abs_path = path + "/" + i->first;
+      string abs_path = path;
+      if (path == "/")
+         abs_path += i->first;
+      else
+         abs_path += "/" + i->first;
 
       if (!i->second.m_bIsDir)
       {
