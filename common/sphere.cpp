@@ -1,5 +1,5 @@
 /*****************************************************************************
-Copyright (c) 2005 - 2009, The Board of Trustees of the University of Illinois.
+Copyright (c) 2005 - 2010, The Board of Trustees of the University of Illinois.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 07/30/2008
+   Yunhong Gu, last updated 03/12/2010
 *****************************************************************************/
 
 #include <sphere.h>
@@ -65,6 +65,9 @@ int SOutput::resizeResBuf(const int64_t& newsize)
 
 int SOutput::resizeIdxBuf(const int64_t& newsize)
 {
+   if (newsize < (m_iRows + 1) * 8)
+      return -1;
+
    int64_t* tmp1 = NULL;
    int* tmp2 = NULL;
 
@@ -78,7 +81,7 @@ int SOutput::resizeIdxBuf(const int64_t& newsize)
       return -1;
    }
 
-   memcpy(tmp1, m_pllIndex, m_iRows * 8);
+   memcpy(tmp1, m_pllIndex, (m_iRows + 1) * 8);
    delete [] m_pllIndex;
    m_pllIndex = tmp1;
 

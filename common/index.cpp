@@ -1000,6 +1000,8 @@ int Index::getUnderReplicated(const string& path, map<string, SNode>& currdir, v
             }
          }
 
+cout << "CHECK " << abs_path << " " << i->second.m_sLocation.size() << " " << d << endl;
+
          if (i->second.m_sLocation.size() < d)
            replica.push_back(abs_path);
       }
