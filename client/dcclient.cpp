@@ -223,31 +223,46 @@ int DCClient::loadOperator(const char* library)
    op.m_strLibrary = dir[dir.size() - 1];
    op.m_strLibPath = library;
    op.m_iSize = st.st_size;
+   op.m_sUploaded.clear();
 
-   m_vOP.insert(m_vOP.end(), op);
+   m_mOP[op.m_strLibrary] = op;
 
    return 0;
 }
 
 int DCClient::loadOperator(SPE& s)
 {
-   int num = m_vOP.size();
+   char addr[128];
+   sprintf(addr, "%s:%d", s.m_strIP.c_str(), s.m_iPort);
+
+   int num = 0;
+   for (map<string, OP>::iterator i = m_mOP.begin(); i != m_mOP.end(); ++ i)
+   {
+      if (i->second.m_sUploaded.find(addr) == i->second.m_sUploaded.end())
+         ++ num;
+   }
    m_pClient->m_DataChn.send(s.m_strIP, s.m_iDataPort, s.m_iSession, (char*)&num, 4);
 
-   for (vector<OP>::iterator i = m_vOP.begin(); i != m_vOP.end(); ++ i)
+   for (map<string, OP>::iterator i = m_mOP.begin(); i != m_mOP.end(); ++ i)
    {
-      m_pClient->m_DataChn.send(s.m_strIP, s.m_iDataPort, s.m_iSession, i->m_strLibrary.c_str(), i->m_strLibrary.length() + 1);
+      if (i->second.m_sUploaded.find(addr) == i->second.m_sUploaded.end())
+      {
+         m_pClient->m_DataChn.send(s.m_strIP, s.m_iDataPort, s.m_iSession, i->second.m_strLibrary.c_str(), i->second.m_strLibrary.length() + 1);
 
-      ifstream lib;
-      lib.open(i->m_strLibPath.c_str(), ios::in | ios::binary);
-      char* buf = new char[i->m_iSize];
-      lib.read(buf, i->m_iSize);
-      lib.close();
+         ifstream lib;
+         lib.open(i->second.m_strLibPath.c_str(), ios::in | ios::binary);
+         char* buf = new char[i->second.m_iSize];
+         lib.read(buf, i->second.m_iSize);
+         lib.close();
 
-      m_pClient->m_DataChn.send(s.m_strIP, s.m_iDataPort, s.m_iSession, buf, i->m_iSize);
+         m_pClient->m_DataChn.send(s.m_strIP, s.m_iDataPort, s.m_iSession, buf, i->second.m_iSize);
+
+         // this library will not be uploaded again during the current client session
+         i->second.m_sUploaded.insert(addr);
+      }
    }
 
-   return 0;
+   return num;
 }
 
 int DCClient::run(const SphereStream& input, SphereStream& output, const string& op, const int& rows, const char* param, const int& size, const int& type)

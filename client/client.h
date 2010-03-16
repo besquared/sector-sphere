@@ -120,6 +120,8 @@ protected:
 
    StatCache m_StatCache;		// cache for stat() call, used for updating file that is not reflected in the master system
 
+   ReadCache m_ReadCache;       	// read cache
+
 private:
    int m_iCount;			// number of concurrent logins
 

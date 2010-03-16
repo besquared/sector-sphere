@@ -38,6 +38,8 @@ written by
    Yunhong Gu, last updated 05/23/2009
 *****************************************************************************/
 
+#include <string.h>
+#include <common.h>
 #include "fscache.h"
 
 using namespace std;
@@ -96,4 +98,100 @@ void StatCache::remove(const string& path)
 
    if (-- s->second.m_iCount == 0)
       m_mOpenedFiles.erase(s);
+}
+
+
+ReadCache::ReadCache():
+m_llCacheSize(0),
+m_llMaxCacheSize(0),
+m_llMaxCacheTime(10000000)
+{
+}
+
+ReadCache::~ReadCache()
+{
+}
+
+int ReadCache::insert(char* block, const std::string& path, const int64_t& offset, const int64_t& size)
+{
+   CacheBlock cb;
+   cb.m_strFileName = path;
+   cb.m_llOffset = offset;
+   cb.m_llSize = size;
+   cb.m_llCreateTime = CTimer::getTime();
+   cb.m_llLastAccessTime = CTimer::getTime();
+   cb.m_pcBlock = block;
+
+   map<string, list<CacheBlock> >::iterator c = m_mCacheBlocks.find(path);
+
+   if (c == m_mCacheBlocks.end())
+      m_mCacheBlocks[path].push_front(cb);
+   else
+      c->second.push_back(cb);
+
+   m_llCacheSize += cb.m_llSize;
+   shrink();
+
+   return 0;
+}
+
+int ReadCache::remove(const std::string& path)
+{
+   map<string, list<CacheBlock> >::iterator c = m_mCacheBlocks.find(path);
+
+   if (c != m_mCacheBlocks.end())
+   {
+      for (list<CacheBlock>::iterator i = c->second.begin(); i != c->second.end(); ++ i)
+         delete [] i->m_pcBlock;
+
+      m_mCacheBlocks.erase(c);
+   }
+
+   return 0;
+}
+
+int ReadCache::read(const std::string& path, char* buf, const int64_t& offset, const int64_t& size)
+{
+   map<string, list<CacheBlock> >::iterator c = m_mCacheBlocks.find(path);
+
+   if (c == m_mCacheBlocks.end())
+      return 0;
+
+   for (list<CacheBlock>::iterator i = c->second.begin(); i != c->second.end(); ++ i)
+   {
+      // this condition can be improved to provide finer granularity
+      if (i->m_llOffset + size >= offset + size)
+      {
+         memcpy(buf, i->m_pcBlock + offset - i->m_llOffset, size);
+         i->m_llLastAccessTime = CTimer::getTime();
+         return size;
+      }
+   }
+
+   return 0;
+}
+
+int ReadCache::shrink()
+{
+   int64_t currtime = CTimer::getTime();
+
+   if (m_llCacheSize < m_llMaxCacheSize)
+      return 0;
+
+   for (map<string, list<CacheBlock> >::iterator i = m_mCacheBlocks.begin(); i != m_mCacheBlocks.end(); ++ i)
+   {
+      for (list<CacheBlock>::iterator j = i->second.begin(); j != i->second.end();)
+      {
+         if (currtime - j->m_llLastAccessTime > m_llMaxCacheTime)
+         {
+            list<CacheBlock>::iterator k = j;
+            ++ j;
+            i->second.erase(k);
+         }
+         else
+            ++ j;
+      }
+   }
+
+   return 0;
 }

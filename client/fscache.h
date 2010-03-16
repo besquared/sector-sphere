@@ -44,6 +44,8 @@ written by
 #include <index.h>
 #include <string>
 #include <map>
+#include <list>
+#include <pthread.h>
 
 struct StatRec
 {
@@ -67,6 +69,41 @@ public:
 
 private:
    std::map<std::string, StatRec> m_mOpenedFiles;
+   pthread_mutex_t m_Lock;
+};
+
+struct CacheBlock
+{
+   std::string m_strFileName;
+   int64_t m_llOffset;
+   int64_t m_llSize;
+   int64_t m_llCreateTime;
+   int64_t m_llLastAccessTime;
+   int m_iAccessCount;
+   char* m_pcBlock;
+};
+
+class ReadCache
+{
+public:
+   ReadCache();
+   virtual ~ReadCache();
+
+public:
+   int insert(char* block, const std::string& path, const int64_t& offset, const int64_t& size);
+   int remove(const std::string& path);
+
+   int read(const std::string& path, char* buf, const int64_t& offset, const int64_t& size);
+
+private:
+   int shrink();
+
+private:
+   std::map<std::string, std::list<CacheBlock> > m_mCacheBlocks;
+   int64_t m_llCacheSize;
+   int64_t m_llMaxCacheSize;
+   int64_t m_llMaxCacheTime;
+   pthread_mutex_t m_Lock;
 };
 
 #endif

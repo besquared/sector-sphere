@@ -250,7 +250,8 @@ int SectorFS::read(const char* path, char* buf, size_t size, off_t offset, struc
    pthread_mutex_unlock(&m_OpenFileLock);
 
    h->seekg(offset);
-   return h->read(buf, size);
+   // FUSE read buffer is too small; we use 1MB prefetch buffer to improve read performance
+   return h->read(buf, size, 1000000);
 }
 
 int SectorFS::write(const char* path, const char* buf, size_t size, off_t offset, struct fuse_file_info* info)

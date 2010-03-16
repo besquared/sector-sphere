@@ -161,7 +161,7 @@ int FSClient::open(const string& filename, int mode, const string& hint)
    return 0;
 }
 
-int64_t FSClient::read(char* buf, const int64_t& size)
+int64_t FSClient::read(char* buf, const int64_t& size, const int64_t& prefetch)
 {
    CGuard fg(m_FileLock);
 
@@ -169,6 +169,7 @@ int64_t FSClient::read(char* buf, const int64_t& size)
    if (m_llCurReadPos + size > m_llSize)
       realsize = int(m_llSize - m_llCurReadPos);
 
+   // optimization on local file; read directly outside Sector
    if (m_bLocal)
    {
       fstream ifs((m_pcLocalPath + m_strFileName).c_str(), ios::binary | ios::in);
@@ -177,6 +178,24 @@ int64_t FSClient::read(char* buf, const int64_t& size)
       ifs.close();
       m_llCurReadPos += realsize;
       return realsize;
+   }
+
+   // check cache
+   int64_t cr = m_pClient->m_ReadCache.read(m_strFileName, buf, m_llCurReadPos, realsize);
+   if (cr > 0)
+   {
+      m_llCurReadPos += cr;
+      return cr;
+   }
+   if (prefetch >= size)
+   {
+      this->prefetch(m_llCurReadPos, prefetch);
+      cr = m_pClient->m_ReadCache.read(m_strFileName, buf, m_llCurReadPos, realsize);
+      if (cr > 0)
+      {
+         m_llCurReadPos += cr;
+         return cr;
+      }
    }
 
    // read command: 1
@@ -205,7 +224,7 @@ int64_t FSClient::read(char* buf, const int64_t& size)
    return recvsize;
 }
 
-int64_t FSClient::write(const char* buf, const int64_t& size)
+int64_t FSClient::write(const char* buf, const int64_t& size, const int64_t& buffer)
 {
    CGuard fg(m_FileLock);
 
@@ -356,6 +375,9 @@ int FSClient::close()
    if (m_bWrite)
       m_pClient->m_StatCache.remove(m_strFileName);
 
+   if (m_bRead)
+      m_pClient->m_ReadCache.remove(m_strFileName);
+
    return 0;
 }
 
@@ -428,4 +450,35 @@ int64_t FSClient::tellg()
 bool FSClient::eof()
 {
    return (m_llCurReadPos >= m_llSize);
+}
+
+int64_t FSClient::prefetch(const int64_t& offset, const int64_t& size)
+{
+   int realsize = size;
+   if (offset >= m_llSize)
+      return -1;
+   if (offset + size > m_llSize)
+      realsize = int(m_llSize - offset);
+
+   // read command: 1
+   int32_t cmd = 1;
+   m_pClient->m_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, (char*)&cmd, 4);
+
+   int response = -1;
+   if ((m_pClient->m_DataChn.recv4(m_strSlaveIP, m_iSlaveDataPort, m_iSession, response) < 0) || (-1 == response))
+      return SectorError::E_CONNECTION;
+
+   char req[16];
+   *(int64_t*)req = offset;
+   *(int64_t*)(req + 8) = realsize;
+   if (m_pClient->m_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, req, 16) < 0)
+      return SectorError::E_CONNECTION;
+
+   char* buf = NULL;
+   int64_t recvsize = m_pClient->m_DataChn.recv(m_strSlaveIP, m_iSlaveDataPort, m_iSession, buf, realsize, m_bSecure);
+   if (recvsize <= 0)
+      return SectorError::E_CONNECTION;
+
+   m_pClient->m_ReadCache.insert(buf, m_strFileName, offset, recvsize);
+   return recvsize;
 }

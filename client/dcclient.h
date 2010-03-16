@@ -35,14 +35,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 01/27/2010
+   Yunhong Gu, last updated 03/12/2010
 *****************************************************************************/
 
 #ifndef __SPHERE_CLIENT_H__
 #define __SPHERE_CLIENT_H__
 
 #include "client.h"
-
 
 class DCClient
 {
@@ -154,8 +153,9 @@ private:
       std::string m_strLibrary;			// UDF name
       std::string m_strLibPath;			// path of the dynamic library that contains the UDF
       int m_iSize;				// size of the library
+      std::set<std::string> m_sUploaded;	// slave address that the op has been uploaded to; to avoid uploading a library multiple times
    };
-   std::vector<OP> m_vOP;
+   std::map<std::string, OP> m_mOP;
    int loadOperator(SPE& s);
 
 private:

@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 02/03/2010
+   Yunhong Gu, last updated 03/16/2010
 *****************************************************************************/
 
 #include <sector.h>
@@ -370,24 +370,24 @@ int SectorFile::open(const string& filename, int mode, const string& hint)
    return f->open(filename, mode, hint);
 }
 
-int64_t SectorFile::read(char* buf, const int64_t& size)
+int64_t SectorFile::read(char* buf, const int64_t& size, const int64_t& prefetch)
 {
    FSClient* f = g_ClientMgmt.lookupFS(m_iID);
 
    if (NULL == f)
       return SectorError::E_INVALID;
 
-   return f->read(buf, size);
+   return f->read(buf, size, prefetch);
 }
 
-int64_t SectorFile::write(const char* buf, const int64_t& size)
+int64_t SectorFile::write(const char* buf, const int64_t& size, const int64_t& buffer)
 {
    FSClient* f = g_ClientMgmt.lookupFS(m_iID);
 
    if (NULL == f)
       return SectorError::E_INVALID;
 
-   return f->write(buf, size);
+   return f->write(buf, size, buffer);
 }
 
 int SectorFile::download(const char* localpath, const bool& cont)

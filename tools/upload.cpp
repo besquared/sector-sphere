@@ -33,7 +33,7 @@ int upload(const char* file, const char* dst, Sector& client)
    }
 
    bool finish = true;
-   if (f->upload(file) < 0)
+   if (f->upload(file) < 0LL)
       finish = false;
 
    f->close();

@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 03/08/2010
+   Yunhong Gu, last updated 03/16/2010
 *****************************************************************************/
 
 
@@ -271,9 +271,6 @@ int Index::move(const string& oldpath, const string& newpath, const string& newn
    vector<string> newdir;
    if (parsePath(newpath, newdir) < 0)
       return -3;
-
-   if (newdir.empty())
-      return -1;
 
    map<string, SNode>* od = &m_mDirectory;
    map<string, SNode>::iterator os;
@@ -999,8 +996,6 @@ int Index::getUnderReplicated(const string& path, map<string, SNode>& currdir, v
                break;
             }
          }
-
-cout << "CHECK " << abs_path << " " << i->second.m_sLocation.size() << " " << d << endl;
 
          if (i->second.m_sLocation.size() < d)
            replica.push_back(abs_path);

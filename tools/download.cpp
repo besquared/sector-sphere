@@ -67,9 +67,17 @@ int download(const char* file, const char* dest, Sector& client)
    else
       localpath = string(dest) + string(file + sn + 1);
 
+   int64_t torecv = attr.m_llSize;
+   char* buf = new char[1000000];
+   while (torecv > 0)
+   {
+      int recv = f->read(buf, 1024, 1000000);
+      torecv -= recv;
+   }
+
    bool finish = true;
-   if (f->download(localpath.c_str(), true) < 0)
-      finish = false;
+//   if (f->download(localpath.c_str(), true) < 0LL)
+//      finish = false;
 
    f->close();
    client.releaseSectorFile(f);

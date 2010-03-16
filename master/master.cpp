@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 02/19/2010
+   Yunhong Gu, last updated 03/15/2010
 *****************************************************************************/
 
 #include <common.h>
@@ -345,6 +345,8 @@ int Master::run()
       // check each slave node
       SectorMsg msg;
       msg.setType(1);
+      //TODO: add list of logout users so that slaves can clear the libraries they uploaded
+
       m_SlaveManager.updateSlaveList(m_vSlaveList, m_llLastUpdateTime);
 
       vector<CUserMessage*>* res = new vector<CUserMessage*>;
@@ -1443,6 +1445,7 @@ int Master::processFSCmd(const string& ip, const int port,  const User* user, co
       }
 
       string newname = dst.substr(dst.rfind('/') + 1, dst.length());
+
       if (rt < 0)
          m_pMetadata->move(src.c_str(), uplevel.c_str(), newname.c_str());
       else
@@ -2175,11 +2178,6 @@ void* Master::replica(void* s)
          {
             // avoid replicate a file that is currently being replicated
             if (self->m_sstrOnReplicate.find(src) != self->m_sstrOnReplicate.end())
-               continue;
-
-            SNode sn;
-            self->m_pMetadata->lookup(src, sn);
-            if ((int)sn.m_sLocation.size() > self->m_SysConfig.m_iReplicaNum)
                continue;
 
             self->createReplica(src, dst);
