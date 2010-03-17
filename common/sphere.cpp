@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 03/12/2010
+   Yunhong Gu, last updated 03/17/2010
 *****************************************************************************/
 
 #include <sphere.h>
@@ -43,6 +43,9 @@ written by
 
 int SOutput::resizeResBuf(const int64_t& newsize)
 {
+   if (newsize < m_iResSize)
+      return -1;
+
    char* tmp = NULL;
 
    try
