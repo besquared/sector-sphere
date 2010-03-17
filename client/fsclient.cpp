@@ -35,7 +35,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*****************************************************************************
 written by
-   Yunhong Gu, last updated 03/08/2010
+   Yunhong Gu, last updated 03/16/2010
 *****************************************************************************/
 
 
@@ -202,14 +202,13 @@ int64_t FSClient::read(char* buf, const int64_t& size, const int64_t& prefetch)
    int32_t cmd = 1;
    m_pClient->m_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, (char*)&cmd, 4);
 
-   int response = -1;
-   if ((m_pClient->m_DataChn.recv4(m_strSlaveIP, m_iSlaveDataPort, m_iSession, response) < 0) || (-1 == response))
-      return SectorError::E_CONNECTION;
-
    char req[16];
    *(int64_t*)req = m_llCurReadPos;
    *(int64_t*)(req + 8) = realsize;
-   if (m_pClient->m_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, req, 16) < 0)
+   m_pClient->m_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, req, 16);
+
+   int response = -1;
+   if ((m_pClient->m_DataChn.recv4(m_strSlaveIP, m_iSlaveDataPort, m_iSession, response) < 0) || (-1 == response))
       return SectorError::E_CONNECTION;
 
    char* tmp = NULL;
@@ -232,15 +231,13 @@ int64_t FSClient::write(const char* buf, const int64_t& size, const int64_t& buf
    int32_t cmd = 2;
    m_pClient->m_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, (char*)&cmd, 4);
 
-   int response = -1;
-   if ((m_pClient->m_DataChn.recv4(m_strSlaveIP, m_iSlaveDataPort, m_iSession, response) < 0) || (-1 == response))
-      return SectorError::E_CONNECTION;
-
    char req[16];
    *(int64_t*)req = m_llCurWritePos;
    *(int64_t*)(req + 8) = size;
+   m_pClient->m_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, req, 16);
 
-   if (m_pClient->m_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, req, 16) < 0)
+   int response = -1;
+   if ((m_pClient->m_DataChn.recv4(m_strSlaveIP, m_iSlaveDataPort, m_iSession, response) < 0) || (-1 == response))
       return SectorError::E_CONNECTION;
 
    int64_t sentsize = m_pClient->m_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, buf, size, m_bSecure);
@@ -284,10 +281,10 @@ int64_t FSClient::download(const char* localpath, const bool& cont)
    int32_t cmd = 3;
    m_pClient->m_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, (char*)&cmd, 4);
 
+   m_pClient->m_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, (char*)&offset, 8);
+
    int response = -1;
    if ((m_pClient->m_DataChn.recv4(m_strSlaveIP, m_iSlaveDataPort, m_iSession, response) < 0) || (-1 == response))
-      return SectorError::E_CONNECTION;
-   if (m_pClient->m_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, (char*)&offset, 8) < 0)
       return SectorError::E_CONNECTION;
 
    int64_t realsize = m_llSize - offset;
@@ -331,11 +328,10 @@ int64_t FSClient::upload(const char* localpath, const bool& cont)
    int32_t cmd = 4;
    m_pClient->m_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, (char*)&cmd, 4);
 
+   m_pClient->m_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, (char*)&size, 8);
+
    int response = -1;
    if ((m_pClient->m_DataChn.recv4(m_strSlaveIP, m_iSlaveDataPort, m_iSession, response) < 0) || (-1 == response))
-      return SectorError::E_CONNECTION;
-
-   if (m_pClient->m_DataChn.send(m_strSlaveIP, m_iSlaveDataPort, m_iSession, (char*)&size, 8) < 0)
       return SectorError::E_CONNECTION;
 
    int64_t unit = 64000000; //send 64MB each time
