@@ -15,6 +15,10 @@
 #include <sector.h>
 #include <conf.h>
 
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
+#include <sys/stat.h>
+#endif
+
 using namespace std;
 
 int download(const char* file, const char* dest, Sector& client)

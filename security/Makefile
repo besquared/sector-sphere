@@ -16,7 +16,7 @@ all: libsecurity.so libsecurity.a sserver ssl_cert_gen
 	$(C++) -fPIC $(CCFLAGS) $< -c
 
 libsecurity.so: $(OBJS)
-	$(C++) -shared -o $@ $^
+	$(C++) $(DYNAMIC_FLAGS) -o $@ $^
 
 libsecurity.a: $(OBJS)
 	ar -rcs $@ $^
@@ -31,5 +31,7 @@ clean:
 	rm -f *.o *.so *.a sserver ssl_cert_gen
 
 install:
-	mv libsecurity.so libsecurity.a ../lib
+	mkdir -p ../lib
+	mv libsecurity.so ../lib
+	mv libsecurity.a ../lib
 	./ssl_cert_gen security

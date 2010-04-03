@@ -16,7 +16,7 @@ all: libslave.so libslave.a start_slave sphere
 	$(C++) -fPIC $(CCFLAGS) $< -c
 
 libslave.so: $(OBJS)
-	$(C++) -shared -o $@ $^
+	$(C++) $(DYNAMIC_FLAGS) -o $@ $^
 
 libslave.a: $(OBJS)
 	ar -rcs $@ $^
@@ -35,4 +35,6 @@ clean:
 	rm -f ./sphere/*.so
 
 install:
-	mv libslave.so libslave.a ../lib
+	mkdir -p ../lib
+	mv libslave.so ../lib
+	mv libslave.a ../lib

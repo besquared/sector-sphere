@@ -16,7 +16,7 @@ all: libmaster.so libmaster.a start_master start_all stop_all
 	$(C++) -fPIC $(CCFLAGS) $< -c
 
 libmaster.so: $(OBJS)
-	$(C++) -shared -o $@ $^
+	$(C++) $(DYNAMIC_FLAGS) -o $@ $^
 
 libmaster.a: $(OBJS)
 	ar -rcs $@ $^
@@ -34,5 +34,7 @@ clean:
 	rm -f *.o *.so *.a start_master start_all stop_all
 
 install:
-	mv libmaster.so libmaster.a ../lib
+	mkdir -p ../lib
+	mv libmaster.so ../lib
+	mv libmaster.a ../lib
 	../security/ssl_cert_gen master

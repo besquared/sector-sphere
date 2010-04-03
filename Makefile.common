@@ -11,3 +11,21 @@ ifeq ($(DEBUG), 1)
 else
    CCFLAGS += -O3
 endif
+
+# System detection & shared object building
+uname_S := $(shell sh -c 'uname -s 2>/dev/null || echo not')
+uname_M := $(shell sh -c 'uname -m 2>/dev/null || echo not')
+uname_O := $(shell sh -c 'uname -o 2>/dev/null || echo not')
+uname_R := $(shell sh -c 'uname -r 2>/dev/null || echo not')
+uname_P := $(shell sh -c 'uname -p 2>/dev/null || echo not')
+uname_V := $(shell sh -c 'uname -v 2>/dev/null || echo not')
+
+ifeq ($(uname_S), Darwin)
+	DYNAMIC_FLAGS = -dynamiclib -Wl,-headerpad_max_install_names,-undefined,dynamic_lookup
+else
+	DYNAMIC_FLAGS = -shared
+endif
+
+# Other operating system names are 
+# GNU/kFreeBSD, UnixWare, SCO_SV, SunOS, 
+# Cygwin, FreeBSD, OpenBSD, NetBSD, AIX, GNU, IRIX64, HP-UX

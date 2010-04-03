@@ -44,7 +44,19 @@ written by
 #include <iostream>
 #include <dirent.h>
 #include <netdb.h>
+
+#if defined(__linux__)
 #include <sys/vfs.h>
+#elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
+#include <sys/param.h>
+#include <sys/mount.h>
+#include <sys/socket.h>
+#include <sys/sysctl.h>
+#include <sys/time.h>
+#include <net/if.h>
+#include <ifaddrs.h>
+#endif
+
 #include <unistd.h>
 #include <sys/times.h>
 #include <utime.h>

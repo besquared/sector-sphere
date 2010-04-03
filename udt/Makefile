@@ -11,7 +11,7 @@ all: libudt.so libudt.a
 	$(C++) -fPIC $(CCFLAGS) $< -c
 
 libudt.so: $(OBJS)
-	$(C++) -shared -o $@ $^
+	$(C++) $(DYNAMIC_FLAGS) -o $@ $^
 
 libudt.a: $(OBJS)
 	ar -rcs $@ $^
@@ -20,4 +20,6 @@ clean:
 	rm -f *.o *.so *.a
 
 install:
-	mv libudt.so libudt.a ../lib
+	mkdir -p ../lib
+	mv libudt.so ../lib
+	mv libudt.a ../lib

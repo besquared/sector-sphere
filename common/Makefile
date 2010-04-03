@@ -10,7 +10,7 @@ all: libcommon.so libcommon.a
 	$(C++) -fPIC $(CCFLAGS) $< -c
 
 libcommon.so: $(OBJS)
-	$(C++) -shared -o $@ $^
+	$(C++) $(DYNAMIC_FLAGS) -o $@ $^
 
 libcommon.a: $(OBJS)
 	ar -rcs $@ $^
@@ -19,4 +19,6 @@ clean:
 	rm -f *.o *.so *.a
 
 install:
-	mv libcommon.so libcommon.a ../lib
+	mkdir -p ../lib
+	mv libcommon.so ../lib
+	mv libcommon.a ../lib

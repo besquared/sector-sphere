@@ -1,5 +1,6 @@
-C++ = g++
-CCFLAGS = -I../../include -shared -fPIC -O3 -g
+include ../../Makefile.common
+
+CCFLAGS = -I../../include $(DYNAMIC_FLAGS) -fPIC -O3 -g
 LDFLAGS = -lstdc++ ../../lib/libcommon.a
 
 all: randwriter.so sort.so sorthash.so wordbucket.so gen_idx.so mr_sort.so mr_word.so

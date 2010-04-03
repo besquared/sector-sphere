@@ -10,7 +10,7 @@ all: libclient.so libclient.a
 	$(C++) -fPIC $(CCFLAGS) $< -c
 
 libclient.so: $(OBJS)
-	$(C++) -shared -o $@ $^
+	$(C++) $(DYNAMIC_FLAGS) -o $@ $^
 
 libclient.a: $(OBJS)
 	ar -rcs $@ $^
@@ -19,4 +19,6 @@ clean:
 	rm -f *.o *.so *.a
 
 install:
-	mv libclient.so libclient.a ../lib
+	mkdir -p ../lib
+	mv libclient.so ../lib
+	mv libclient.a ../lib
